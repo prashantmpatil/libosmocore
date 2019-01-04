@@ -302,6 +302,8 @@ struct msgb *gsm0808_create_handover_performed(const struct gsm0808_handover_per
 struct msgb *gsm0808_create_dtap(struct msgb *msg, uint8_t link_id);
 void gsm0808_prepend_dtap_header(struct msgb *msg, uint8_t link_id);
 
+struct msgb *gsm0808_create_common_id(const char *imsi);
+
 const struct tlv_definition *gsm0808_att_tlvdef(void);
 
 /*! Parse BSSAP TLV structure using \ref tlv_parse */

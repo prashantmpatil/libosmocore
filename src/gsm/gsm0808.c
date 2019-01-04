@@ -1258,6 +1258,32 @@ struct msgb *gsm0808_create_dtap(struct msgb *msg_l3, uint8_t link_id)
 	return msg;
 }
 
+/*! Crate BSSMAP Common ID message.
+ * \param[in] imsi  Subscriber's IMSI to send in the Common ID message.
+ * \return allocated msgb with BSSMAP Common ID message.
+ */
+struct msgb *gsm0808_create_common_id(const char *imsi)
+{
+	uint8_t mid_buf[GSM48_MI_SIZE + 2];
+	int mid_len;
+	struct msgb *msg = msgb_alloc_headroom(BSSMAP_MSG_SIZE, BSSMAP_MSG_HEADROOM, "CommonID");
+	if (!msg)
+		return NULL;
+	OSMO_ASSERT(strlen(imsi) <= GSM48_MI_SIZE);
+
+	/* Message Type, 3.2.2.1 */
+	msgb_v_put(msg, BSS_MAP_MSG_COMMON_ID);
+
+	/* mandatory IMSI 3.2.2.6 */
+	mid_len = gsm48_generate_mid_from_imsi(mid_buf, imsi);
+	msgb_tlv_put(msg, GSM0808_IE_IMSI, mid_len - 2, mid_buf + 2);
+
+	/* prepend header with final length */
+	msg->l3h = msgb_tv_push(msg, BSSAP_MSG_BSS_MANAGEMENT, msgb_length(msg));
+
+	return msg;
+}
+
 /* As per 3GPP TS 48.008 version 11.7.0 Release 11 */
 static const struct tlv_definition bss_att_tlvdef = {
 	.def = {
