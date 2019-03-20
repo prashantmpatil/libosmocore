@@ -253,7 +253,7 @@ static void lapd_dl_newstate(struct lapd_datalink *dl, uint32_t state)
 	dl->state = state;
 }
 
-static void *tall_lapd_ctx = NULL;
+static __thread void *tall_lapd_ctx;
 
 /* init datalink instance and allocate history */
 void lapd_dl_init(struct lapd_datalink *dl, uint8_t k, uint8_t v_range,
@@ -300,7 +300,7 @@ void lapd_dl_init(struct lapd_datalink *dl, uint8_t k, uint8_t v_range,
 	lapd_dl_newstate(dl, LAPD_STATE_IDLE);
 
 	if (!tall_lapd_ctx)
-		tall_lapd_ctx = talloc_named_const(NULL, 1, "lapd context");
+		tall_lapd_ctx = talloc_named_const(OTC_GLOBAL, 1, "lapd context");
 	dl->tx_hist = talloc_zero_array(tall_lapd_ctx,
 					struct lapd_history, dl->range_hist);
 }

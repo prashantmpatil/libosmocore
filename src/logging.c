@@ -1018,7 +1018,7 @@ int log_targets_reopen(void)
 
 /*! Initialize the Osmocom logging core
  *  \param[in] inf Information regarding logging categories, could be NULL
- *  \param[in] ctx talloc context for logging allocations
+ *  \param[in] ctx UNUSED, only for legacy API compatibility
  *  \returns 0 in case of success, negative in case of error
  *
  *  If inf is NULL then only library-internal categories are initialized.
@@ -1027,7 +1027,7 @@ int log_init(const struct log_info *inf, void *ctx)
 {
 	int i;
 
-	tall_log_ctx = talloc_named_const(ctx, 1, "logging");
+	tall_log_ctx = talloc_named_const(OTC_GLOBAL, 1, "logging");
 	if (!tall_log_ctx)
 		return -ENOMEM;
 
