@@ -12,7 +12,7 @@ endif
 
 lib_LTLIBRARIES = libosmocore.la
 
-libosmocore_la_LIBADD = $(BACKTRACE_LIB) $(TALLOC_LIBS) $(LIBRARY_RT)
+libosmocore_la_LIBADD = $(BACKTRACE_LIB) $(TALLOC_LIBS) $(LIBRARY_RT) -lpthread
 libosmocore_la_SOURCES = context.c timer.c timer_gettimeofday.c timer_clockgettime.c \
 			 select.c signal.c msgb.c bits.c \
 			 bitvec.c bitcomp.c counter.c fsm.c \
@@ -27,6 +27,7 @@ libosmocore_la_SOURCES = context.c timer.c timer_gettimeofday.c timer_clockgetti
 			 tdef.c \
 			 sockaddr_str.c \
 			 use_count.c \
+			 it_msgq.c \
 			 $(NULL)
 
 if HAVE_SSSE3

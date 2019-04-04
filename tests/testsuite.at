@@ -356,3 +356,9 @@ AT_KEYWORDS([context])
 cat $abs_srcdir/context/context_test.ok > expout
 AT_CHECK([$abs_top_builddir/tests/context/context_test], [0], [expout], [ignore])
 AT_CLEANUP
+
+AT_SETUP([it_msgq])
+AT_KEYWORDS([it_msgq])
+cat $abs_srcdir/it_msgq/it_msgq_test.ok > expout
+AT_CHECK([$abs_top_builddir/tests/it_msgq/it_msgq_test], [0], [expout], [ignore])
+AT_CLEANUP
