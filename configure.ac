@@ -262,6 +262,15 @@ AC_ARG_ENABLE(pseudotalloc,
         [enable_pseudotalloc=$enableval], [enable_pseudotalloc="no"])
 AM_CONDITIONAL(ENABLE_PSEUDOTALLOC, test x"$enable_pseudotalloc" = x"yes")
 
+AC_ARG_ENABLE(mslookup,
+	[AS_HELP_STRING(
+		[--disable-mslookup],
+		[Disable building mslookup library],
+	)],
+	[ENABLE_MSLOOKUP=$enableval], [ENABLE_MSLOOKUP="yes"])
+AM_CONDITIONAL(ENABLE_MSLOOKUP, test x"$ENABLE_MSLOOKUP" = x"yes")
+AC_SUBST(ENABLE_MSLOOKUP)
+
 AC_ARG_ENABLE(embedded,
 	[AS_HELP_STRING(
 		[--enable-embedded],
@@ -396,6 +405,7 @@ AC_OUTPUT(
 	libosmogb.pc
 	libosmoctrl.pc
 	libosmosim.pc
+	libosmomslookup.pc
 	include/Makefile
 	src/Makefile
 	src/vty/Makefile
@@ -406,6 +416,7 @@ AC_OUTPUT(
 	src/gb/Makefile
 	src/ctrl/Makefile
 	src/pseudotalloc/Makefile
+	src/mslookup/Makefile
 	tests/Makefile
 	tests/atlocal
 	utils/Makefile

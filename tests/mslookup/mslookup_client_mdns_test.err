@@ -1,0 +1,133 @@
+Total time passed: 0.000000 s
+-- test_server_client --
+server_init
+client_init
+client_query
+sending mDNS query: how to reach gsup.hlr.123456789012345.imsi?
+server_recv
+received request for: gsup.hlr.123456789012345.imsi
+received something that is not a valid mDNS answer, ignoring
+server_recv
+received something that is not a valid DNS request, ignoring
+(server and client listen on same IP and port in this test, so this was probably the server's own answer, this is expected)
+received mDNS answer for id=0, domain=gsup.hlr.123456789012345.imsi
+possible mDNS result for domain=gsup.hlr.123456789012345.imsi -> ipv4: 42.42.42.42:444 -> ipv6: [1122:3344:5566:7788:99aa:bbcc:ddee:ff00]:666 (age=3)
+Total time passed: 5.000000 s
+client_recv
+client_recv(): gsup.hlr.123456789012345.imsi -> ipv4: 42.42.42.42:444 -> ipv6: [1122:3344:5566:7788:99aa:bbcc:ddee:ff00]:666 (age=3)
+server_stop
+client_stop
+-- test_result_from_mdns_answer --
+---
+test: IPv4
+error: false
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+exp: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 
+res: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 
+---
+test: IPv6
+error: false
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+exp: 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+res: 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+---
+test: IPv4 + IPv6
+error: false
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+exp: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+res: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+---
+test: A twice
+error: true
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+- A 42.42.42.42
+'A' record found twice in mDNS answer
+---
+test: AAAA twice
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=444
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+'AAAA' record found twice in mDNS answer
+---
+test: invalid TXT: no key/value pair
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT 12345
+failed to decode txt record
+---
+test: age twice
+error: true
+records:
+- TXT age=3
+- TXT age=3
+'TXT' record for 'age' found twice in mDNS answer
+---
+test: port as first record
+error: true
+records:
+- TXT port=444
+'TXT' record for 'port' without previous record
+---
+test: port without previous ip record
+error: true
+records:
+- TXT age=3
+- TXT port=444
+'TXT' record for 'port' without previous 'A' or 'AAAA' record
+---
+test: invalid TXT: invalid key
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT hello=world
+unexpected key 'hello' in TXT record
+---
+test: unexpected record type
+error: true
+records:
+- TXT age=3
+- (invalid)
+unexpected record type
+---
+test: missing record: age
+error: true
+records:
+- A 42.42.42.42
+- TXT port=444
+missing resource records in mDNS answer
+---
+test: missing record: port for ipv4
+error: true
+records:
+- TXT age=3
+- A 42.42.42.42
+missing resource records in mDNS answer
+---
+test: missing record: port for ipv4 #2
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+- A 42.42.42.42
+missing resource records in mDNS answer

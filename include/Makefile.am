@@ -164,6 +164,17 @@ nobase_include_HEADERS += \
                           osmocom/ctrl/control_vty.h
 endif
 
+if ENABLE_MSLOOKUP
+nobase_include_HEADERS += \
+			osmocom/mslookup/mdns.h \
+			osmocom/mslookup/mdns_sock.h \
+			osmocom/mslookup/mslookup.h \
+			osmocom/mslookup/mslookup_client.h \
+			osmocom/mslookup/mslookup_client_mdns.h \
+			osmocom/mslookup/mslookup_client_fake.h \
+			$(NULL)
+endif
+
 noinst_HEADERS = \
 	osmocom/gsm/kasumi.h \
 	osmocom/gsm/gea.h \

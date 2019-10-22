@@ -68,6 +68,16 @@ if ENABLE_GB
 check_PROGRAMS += gb/bssgp_fc_test gb/gprs_bssgp_test gb/gprs_ns_test fr/fr_test
 endif
 
+if ENABLE_MSLOOKUP
+check_PROGRAMS += \
+	mslookup/mslookup_test \
+	mslookup/mslookup_client_test \
+	mslookup/mslookup_client_mdns_test \
+	mslookup/mdns_test \
+	$(NULL)
+
+endif
+
 utils_utils_test_SOURCES = utils/utils_test.c
 utils_utils_test_LDADD = $(LDADD) $(top_builddir)/src/gsm/libosmogsm.la
 
@@ -259,6 +269,18 @@ use_count_use_count_test_LDADD = $(LDADD)
 context_context_test_SOURCES = context/context_test.c
 context_context_test_LDADD = $(LDADD)
 
+mslookup_mslookup_test_SOURCES = mslookup/mslookup_test.c
+mslookup_mslookup_test_LDADD = $(LDADD) $(top_builddir)/src/mslookup/libosmomslookup.la $(top_builddir)/src/gsm/libosmogsm.la
+
+mslookup_mslookup_client_test_SOURCES = mslookup/mslookup_client_test.c
+mslookup_mslookup_client_test_LDADD = $(LDADD) $(top_builddir)/src/mslookup/libosmomslookup.la $(top_builddir)/src/gsm/libosmogsm.la
+
+mslookup_mslookup_client_mdns_test_SOURCES = mslookup/mslookup_client_mdns_test.c
+mslookup_mslookup_client_mdns_test_LDADD = $(LDADD) $(top_builddir)/src/mslookup/libosmomslookup.la $(top_builddir)/src/gsm/libosmogsm.la
+
+mslookup_mdns_test_SOURCES = mslookup/mdns_test.c
+mslookup_mdns_test_LDADD = $(LDADD) $(top_builddir)/src/mslookup/libosmomslookup.la $(top_builddir)/src/gsm/libosmogsm.la
+
 # The `:;' works around a Bash 3.2 bug when the output is not writeable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	:;{ \
@@ -333,6 +355,12 @@ EXTRA_DIST = testsuite.at $(srcdir)/package.m4 $(TESTSUITE)		\
 	     use_count/use_count_test.ok use_count/use_count_test.err \
 	     context/context_test.ok \
 	     gsm0502/gsm0502_test.ok \
+	     mslookup/mslookup_test.ok \
+	     mdns_test.ok \
+	     mslookup_client_mdns_test.err \
+	     mslookup_client_test.err \
+	     mslookup_ctypes_test.py \
+	     mslookup_test.ok \
 	     $(NULL)
 
 DISTCLEANFILES = atconfig atlocal conv/gsm0503_test_vectors.c

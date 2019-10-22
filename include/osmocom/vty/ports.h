@@ -34,4 +34,6 @@
 #define OSMO_VTY_PORT_HNBGW	4261
 /* 4262-4263 used by control interface */
 #define OSMO_VTY_PORT_CBC	4264
+/* 4265 used by control interface */
+/* 4266 used by mslookup mDNS server */
 /* When adding/changing port numbers, keep docs and wiki in sync. See above. */

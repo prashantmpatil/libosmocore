@@ -29,6 +29,8 @@ The libosmcoore.git repository build multiple libraries:
 * **libosmocoding** contains an implementation of GSM channel coding
 * **libosmosim** contains infrastructure to interface SIM/UICC/USIM cards
 * **libosmotrau** contains encoding/decoding functions for A-bis TRAU frames
+* **libosmomslookup** contains mobile subscriber lookup functions, currently
+  over DNS/mDNS (other protocols like GSUP may be added in the future)
 
 
 Homepage

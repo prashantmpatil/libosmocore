@@ -1,1 +1,2 @@
 enable_sim_test='@ENABLE_PCSC@'
+enable_mslookup_test='@ENABLE_MSLOOKUP@'

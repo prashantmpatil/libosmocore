@@ -225,6 +225,11 @@ static const struct log_info_cat internal_cat[OSMO_NUM_DLIB] = {
 		.description = "Remote SIM protocol",
 		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
+	[INT2IDX(DLMSLOOKUP)] = {
+		.name = "DLMSLOOKUP",
+		.description = "Mobile Subscriber Lookup",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
 };
 
 void assert_loginfo(const char *src)

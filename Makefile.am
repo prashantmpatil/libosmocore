@@ -1,11 +1,12 @@
 ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = $(all_includes) -I$(top_srcdir)/include
-SUBDIRS = include src src/vty src/codec src/gsm src/coding src/gb src/ctrl src/sim src/pseudotalloc utils tests
+SUBDIRS = include src src/vty src/codec src/gsm src/coding src/gb src/ctrl src/sim src/pseudotalloc src/mslookup utils tests
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libosmocore.pc libosmocodec.pc libosmovty.pc libosmogsm.pc \
-		 libosmogb.pc libosmoctrl.pc libosmocoding.pc libosmosim.pc
+		 libosmogb.pc libosmoctrl.pc libosmocoding.pc libosmosim.pc \
+		 libosmomslookup.pc
 
 @RELMAKE@
 
@@ -31,7 +32,8 @@ HTML = \
 	$(top_builddir)/doc/codec/html/index.html \
 	$(top_builddir)/doc/coding/html/index.html \
 	$(top_builddir)/doc/ctrl/html/index.html \
-	$(top_builddir)/doc/gb/html/index.html
+	$(top_builddir)/doc/gb/html/index.html \
+	$(top_builddir)/doc/mslookup/html/index.html
 
 if HAVE_DOXYGEN
 html_DATA = $(top_builddir)/doc/html.tar
@@ -120,6 +122,14 @@ $(top_builddir)/doc/libosmogb.tag.prep: $(top_builddir)/Doxyfile.gb \
 	-$(DOXYGEN) $(top_builddir)/Doxyfile.gb
 	touch "$@"
 
+$(top_builddir)/doc/libosmomslookup.tag.prep: $(top_builddir)/Doxyfile.gb \
+		$(top_srcdir)/include/osmocom/mslookup/*.h \
+		$(top_srcdir)/src/mslookup/*.[hc]
+	rm -rf $(top_builddir)/doc/mslookup; mkdir -p $(top_builddir)/doc/mslookup
+	rm -rf $(top_builddir)/doc/mslookup.map
+	-$(DOXYGEN) $(top_builddir)/Doxyfile.gb
+	touch "$@"
+
 # Build for real once all depending .tag files are in place.
 # Depend on the own .tag.prep file to avoid concurrent builds of the same doc
 # tree, and to also depend on all the source files listed above.
@@ -138,7 +148,8 @@ $(top_builddir)/doc/core/html/index.html: $(top_builddir)/doc/libosmocore.tag.pr
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
 		$(top_builddir)/doc/libosmoctrl.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/core; mkdir -p $(top_builddir)/doc/core
 	$(DOXYGEN) Doxyfile.core
 
@@ -148,7 +159,8 @@ $(top_builddir)/doc/gsm/html/index.html: $(top_builddir)/doc/libosmogsm.tag.prep
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
 		$(top_builddir)/doc/libosmoctrl.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/gsm; mkdir -p $(top_builddir)/doc/gsm
 	$(DOXYGEN) Doxyfile.gsm
 
@@ -159,7 +171,8 @@ $(top_builddir)/doc/vty/html/index.html: $(top_builddir)/doc/libosmovty.tag.prep
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
 		$(top_builddir)/doc/libosmoctrl.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/vty/html $(top_builddir)/doc/vty/latex
 	$(DOXYGEN) Doxyfile.vty
 
@@ -169,7 +182,8 @@ $(top_builddir)/doc/codec/html/index.html: $(top_builddir)/doc/libosmocodec.tag.
 		$(top_builddir)/doc/libosmovty.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
 		$(top_builddir)/doc/libosmoctrl.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/codec; mkdir -p $(top_builddir)/doc/codec
 	$(DOXYGEN) Doxyfile.codec
 
@@ -179,7 +193,8 @@ $(top_builddir)/doc/coding/html/index.html: $(top_builddir)/doc/libosmocoding.ta
 		$(top_builddir)/doc/libosmovty.tag.prep \
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmoctrl.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/coding; mkdir -p $(top_builddir)/doc/coding
 	$(DOXYGEN) Doxyfile.coding
 
@@ -189,7 +204,8 @@ $(top_builddir)/doc/ctrl/html/index.html: $(top_builddir)/doc/libosmoctrl.tag.pr
 		$(top_builddir)/doc/libosmovty.tag.prep \
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
-		$(top_builddir)/doc/libosmogb.tag.prep
+		$(top_builddir)/doc/libosmogb.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/ctrl; mkdir -p $(top_builddir)/doc/ctrl
 	$(DOXYGEN) Doxyfile.ctrl
 
@@ -199,8 +215,19 @@ $(top_builddir)/doc/gb/html/index.html: $(top_builddir)/doc/libosmogb.tag.prep \
 		$(top_builddir)/doc/libosmovty.tag.prep \
 		$(top_builddir)/doc/libosmocodec.tag.prep \
 		$(top_builddir)/doc/libosmocoding.tag.prep \
-		$(top_builddir)/doc/libosmoctrl.tag.prep
+		$(top_builddir)/doc/libosmoctrl.tag.prep \
+		$(top_builddir)/doc/libosmomslookup.tag.prep
 	rm -rf $(top_builddir)/doc/gb; mkdir -p $(top_builddir)/doc/gb
+	$(DOXYGEN) Doxyfile.gb
+
+$(top_builddir)/doc/mslookup/html/index.html: $(top_builddir)/doc/libosmomslookup.tag.prep \
+		$(top_builddir)/doc/libosmocore.tag.prep \
+		$(top_builddir)/doc/libosmogsm.tag.prep \
+		$(top_builddir)/doc/libosmovty.tag.prep \
+		$(top_builddir)/doc/libosmocodec.tag.prep \
+		$(top_builddir)/doc/libosmocoding.tag.prep \
+		$(top_builddir)/doc/libosmoctrl.tag.prep
+	rm -rf $(top_builddir)/doc/mslookup; mkdir -p $(top_builddir)/doc/mslookup
 	$(DOXYGEN) Doxyfile.gb
 
 if HAVE_DOXYGEN
@@ -208,9 +235,9 @@ install-data-hook:
 	cd $(DESTDIR)$(htmldir) && tar xf html.tar && rm -f html.tar
 
 uninstall-hook:
-	cd $(DESTDIR)$(htmldir) && rm -rf {core,gsm,vty,codec,coding,ctrl,gb}
+	cd $(DESTDIR)$(htmldir) && rm -rf {core,gsm,vty,codec,coding,ctrl,gb,mslookup}
 
-DX_CLEAN = doc/{core,gsm,vty,codec,coding,ctrl,gb}/html/search/* doc/{core,gsm,vty,codec,coding,ctrl,gb}/{html,latex}/* doc/html.tar doc/{core,gsm,vty,codec,coding,ctrl,gb}/doxygen_sqlite3.db doc/*.tag doc/*.tag.prep
+DX_CLEAN = doc/{core,gsm,vty,codec,coding,ctrl,gb,mslookup}/html/search/* doc/{core,gsm,vty,codec,coding,ctrl,gb,mslookup}/{html,latex}/* doc/html.tar doc/{core,gsm,vty,codec,coding,ctrl,gb,mslookup}/doxygen_sqlite3.db doc/*.tag doc/*.tag.prep
 endif
 
 MOSTLYCLEANFILES = $(DX_CLEAN)
