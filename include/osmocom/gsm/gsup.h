@@ -388,4 +388,6 @@ int osmo_gsup_encode(struct msgb *msg, const struct osmo_gsup_message *gsup_msg)
 int osmo_gsup_get_err_msg_type(enum osmo_gsup_message_type type_in)
 	OSMO_DEPRECATED("Use OSMO_GSUP_TO_MSGT_ERROR() instead");
 
+void osmo_gsup_set_reply(const struct osmo_gsup_message *rx, struct osmo_gsup_message *reply);
+
 /*! @} */

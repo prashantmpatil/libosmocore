@@ -903,4 +903,29 @@ const struct value_string osmo_gsup_message_class_names[] = {
 	{}
 };
 
+/*! Set fields that need to be copied from a received message over to its reply.
+ * Copy IMSI. Set cn_domain. Set reply->destination_name to rc->source_name, so that proxy routing works.
+ * Note that fields like reply->destination_name may reference the same memory as rx and are not deep-copied, as usual
+ * when using this GSUP API.
+ * \param[in] rx  Received GSUP message that is being replied to.
+ * \param[inout] reply  The message that should be the response to rx.
+ */
+void osmo_gsup_set_reply(const struct osmo_gsup_message *rx, struct osmo_gsup_message *reply)
+{
+	OSMO_STRLCPY_ARRAY(reply->imsi, rx->imsi);
+	reply->message_class = rx->message_class,
+	reply->cn_domain = rx->cn_domain;
+	reply->destination_name = rx->destination_name;
+	reply->destination_name_len = rx->destination_name_len;
+
+	/* RP-Message-Reference is mandatory for SM Service */
+	reply->sm_rp_mr = rx->sm_rp_mr;
+
+	/* For SS/USSD, it's important to keep both session state and ID IEs */
+	if (rx->session_state != OSMO_GSUP_SESSION_STATE_NONE) {
+		reply->session_state = OSMO_GSUP_SESSION_STATE_CONTINUE;
+		reply->session_id = rx->session_id;
+	}
+}
+
 /*! @} */
