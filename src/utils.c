@@ -756,6 +756,20 @@ char *osmo_escape_str_c(const void *ctx, const char *str, int in_len)
 	return osmo_escape_str_buf2(buf, in_len+1, str, in_len);
 }
 
+/*! Like osmo_quote_str_buf3(), but returning the buf instead of the required number of characters.
+ * The function signature is suitable for OSMO_STRBUF_APPEND_NOLEN().
+ * \param[out] buf  string buffer to write escaped characters to.
+ * \param[in] bufsize  sizeof(buf).
+ * \param[in] str  A string that may contain any characters.
+ * \param[in] in_len  Pass -1 to print until nul char, or >= 0 to force a length.
+ * \return buf.
+ */
+char *osmo_quote_str_buf2(char *buf, size_t bufsize, const char *str, int in_len)
+{
+	osmo_quote_str_buf3(buf, bufsize, str, in_len);
+	return buf;
+}
+
 /*! Like osmo_escape_str_buf2(), but returns double-quotes around a string, or "NULL" for a NULL string.
  * This allows passing any char* value and get its C representation as string.
  * The function signature is suitable for OSMO_STRBUF_APPEND_NOLEN().
@@ -765,7 +779,7 @@ char *osmo_escape_str_c(const void *ctx, const char *str, int in_len)
  * \param[in] in_len  Pass -1 to print until nul char, or >= 0 to force a length.
  * \return Number of characters that would be written if bufsize were large enough excluding '\0' (like snprintf()).
  */
-char *osmo_quote_str_buf2(char *buf, size_t bufsize, const char *str, int in_len)
+size_t osmo_quote_str_buf3(char *buf, size_t bufsize, const char *str, int in_len)
 {
 	struct osmo_strbuf sb = { .buf = buf, .len = bufsize };
 	if (!str)
@@ -775,7 +789,7 @@ char *osmo_quote_str_buf2(char *buf, size_t bufsize, const char *str, int in_len
 		OSMO_STRBUF_APPEND_NOLEN(sb, osmo_escape_str_buf2, str, in_len);
 		OSMO_STRBUF_PRINTF(sb, "\"");
 	}
-	return buf;
+	return sb.chars_needed;
 }
 
 /*! Like osmo_quote_str_buf2, but with unusual ordering of arguments, and may sometimes return string constants instead
@@ -815,21 +829,7 @@ const char *osmo_quote_str(const char *str, int in_len)
  */
 char *osmo_quote_str_c(const void *ctx, const char *str, int in_len)
 {
-	size_t len = in_len == -1 ? strlen(str) : in_len;
-	char *buf;
-
-	/* account for two quote characters + terminating NUL */
-	len += 3;
-
-	/* some minimum length for things like "NULL" or "(error)" */
-	if (len < 32)
-		len = 32;
-
-	buf = talloc_size(ctx, len);
-	if (!buf)
-		return NULL;
-
-	return osmo_quote_str_buf2(buf, len, str, in_len);
+	OSMO_NAME_C_IMPL(ctx, 32, "(error)", osmo_quote_str_buf3, str, in_len)
 }
 
 /*! perform an integer square root operation on unsigned 32bit integer.

@@ -153,6 +153,7 @@ const char *osmo_escape_str_buf(const char *str, int in_len, char *buf, size_t b
 char *osmo_escape_str_c(const void *ctx, const char *str, int in_len);
 const char *osmo_quote_str(const char *str, int in_len);
 char *osmo_quote_str_buf2(char *buf, size_t bufsize, const char *str, int in_len);
+size_t osmo_quote_str_buf3(char *buf, size_t bufsize, const char *str, int in_len);
 const char *osmo_quote_str_buf(const char *str, int in_len, char *buf, size_t bufsize);
 char *osmo_quote_str_c(const void *ctx, const char *str, int in_len);
 
