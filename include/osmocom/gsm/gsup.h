@@ -214,6 +214,7 @@ enum osmo_gsup_cancel_type {
 };
 
 enum osmo_gsup_cn_domain {
+	OSMO_GSUP_CN_DOMAIN_UNSPECIFIED		= 0,
 	OSMO_GSUP_CN_DOMAIN_PS			= 1,
 	OSMO_GSUP_CN_DOMAIN_CS			= 2,
 };
