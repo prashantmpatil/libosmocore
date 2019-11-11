@@ -36,7 +36,7 @@ static int sock_addrstr_from_mdns_record(struct osmo_sockaddr_str *sockaddr_str,
 				LOGP(DLMSLOOKUP, LOGL_ERROR, "unexpected length of A record\n");
 				return -EINVAL;
 			}
-			osmo_sockaddr_str_from_32n(sockaddr_str, *(uint32_t *)rec->data, 0);
+			osmo_sockaddr_str_from_32(sockaddr_str, *(uint32_t *)rec->data, 0);
 			break;
 		case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_AAAA:
 			if (rec->length != 16) {
