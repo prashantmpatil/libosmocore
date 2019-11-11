@@ -913,16 +913,22 @@ const struct value_string osmo_gsup_message_class_names[] = {
 void osmo_gsup_set_reply(const struct osmo_gsup_message *rx, struct osmo_gsup_message *reply)
 {
 	OSMO_STRLCPY_ARRAY(reply->imsi, rx->imsi);
-	reply->message_class = rx->message_class,
-	reply->cn_domain = rx->cn_domain;
-	reply->destination_name = rx->destination_name;
-	reply->destination_name_len = rx->destination_name_len;
+
+	if (reply->message_class == OSMO_GSUP_MESSAGE_CLASS_UNSET)
+		reply->message_class = rx->message_class;
+
+	if (!reply->destination_name || !reply->destination_name_len) {
+		reply->destination_name = rx->source_name;
+		reply->destination_name_len = rx->source_name_len;
+	}
 
 	/* RP-Message-Reference is mandatory for SM Service */
-	reply->sm_rp_mr = rx->sm_rp_mr;
+	if (!reply->sm_rp_mr)
+		reply->sm_rp_mr = rx->sm_rp_mr;
 
 	/* For SS/USSD, it's important to keep both session state and ID IEs */
-	if (rx->session_state != OSMO_GSUP_SESSION_STATE_NONE) {
+	if (rx->session_state != OSMO_GSUP_SESSION_STATE_NONE
+	    && reply->session_state == OSMO_GSUP_SESSION_STATE_NONE) {
 		reply->session_state = OSMO_GSUP_SESSION_STATE_CONTINUE;
 		reply->session_id = rx->session_id;
 	}
