@@ -44,14 +44,12 @@ void osmo_mslookup_s_set_logging(bool enabled, unsigned int level)
 
 bool osmo_mslookup_s_init_dns()
 {
-	/* FIXME: pass as arguments? also we need to change it to ip_listen, ip_server, see comment in
-	 * mslookup_client_dns.c */
-	const char *ip = "127.0.0.1";
-	uint16_t port = 12345;
-
 	if (!osmo_mslookup_s_init())
 		return false;
-	osmo_mslookup_client_add_mdns(g_client, ip, port, false);
+	/* FIXME: how to use ipv6, maybe add two init functions, one for v4, one for v6? */
+	/* FIXME: code path for reuse_addr=false can probably be removed, does not seem useful */
+	if (!osmo_mslookup_client_add_mdns(g_client, OSMO_MSLOOKUP_MDNS_IP4, OSMO_MSLOOKUP_MDNS_PORT, true))
+		return false;
 	return true;
 }
 
