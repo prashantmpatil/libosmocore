@@ -149,7 +149,8 @@ void sockaddr_str_test_conversions()
 			uint32_t a = 0;
 
 			rc = osmo_sockaddr_str_to_32(x, &a);
-			printf("  osmo_sockaddr_str_to_32() %s uint32_t=0x%x\n", rc_name(rc), a);
+			printf("  osmo_sockaddr_str_to_32() %s uint8_t[4]=[ %s]\n", rc_name(rc),
+			       osmo_hexdump((void*)&a, sizeof(a)));
 
 			if (rc == 0) {
 				struct osmo_sockaddr_str back;
@@ -164,13 +165,14 @@ void sockaddr_str_test_conversions()
 		{
 			uint32_t a = 0;
 
-			rc = osmo_sockaddr_str_to_32n(x, &a);
-			printf("  osmo_sockaddr_str_to_32n() %s uint32_t=0x%x\n", rc_name(rc), a);
+			rc = osmo_sockaddr_str_to_32h(x, &a);
+			printf("  osmo_sockaddr_str_to_32h() %s uint8_t[4]=[ %s]\n", rc_name(rc),
+			       osmo_hexdump((void*)&a, sizeof(a)));
 
 			if (rc == 0) {
 				struct osmo_sockaddr_str back;
-				rc = osmo_sockaddr_str_from_32n(&back, a, x->port);
-				printf("   -> osmo_sockaddr_str_from_32n() %s ", rc_name(rc));
+				rc = osmo_sockaddr_str_from_32h(&back, a, x->port);
+				printf("   -> osmo_sockaddr_str_from_32h() %s ", rc_name(rc));
 				dump_oip(&back);
 				if (memcmp(x, &back, sizeof(back)))
 					printf("      DIFFERS!\n");

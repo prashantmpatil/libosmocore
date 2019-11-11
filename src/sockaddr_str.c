@@ -255,7 +255,7 @@ int osmo_sockaddr_str_from_in6_addr(struct osmo_sockaddr_str *sockaddr_str, cons
 	return 0;
 }
 
-/*! Convert IPv4 address from 32bit host-byte-order to osmo_sockaddr_str, and set port.
+/*! Convert IPv4 address from 32bit network-byte-order to osmo_sockaddr_str, and set port.
  * \param[out] sockaddr_str  The instance to copy to.
  * \param[in] addr  32bit IPv4 address data.
  * \param[in] port  Port number.
@@ -270,17 +270,24 @@ int osmo_sockaddr_str_from_32(struct osmo_sockaddr_str *sockaddr_str, uint32_t i
 	return osmo_sockaddr_str_from_in_addr(sockaddr_str, &addr, port);
 }
 
-/*! Convert IPv4 address from 32bit network-byte-order to osmo_sockaddr_str, and set port.
+/*! Convert IPv4 address from 32bit host-byte-order to osmo_sockaddr_str, and set port.
  * \param[out] sockaddr_str  The instance to copy to.
  * \param[in] addr  32bit IPv4 address data.
  * \param[in] port  Port number.
  * \return 0 on success, negative on error.
  */
-int osmo_sockaddr_str_from_32n(struct osmo_sockaddr_str *sockaddr_str, uint32_t ip, uint16_t port)
+int osmo_sockaddr_str_from_32h(struct osmo_sockaddr_str *sockaddr_str, uint32_t ip, uint16_t port)
 {
 	if (!sockaddr_str)
 		return -ENOSPC;
 	return osmo_sockaddr_str_from_32(sockaddr_str, osmo_ntohl(ip), port);
+}
+
+/*! DEPRECATED: the name suggests a conversion from network byte order, but actually converts from host byte order. Use
+ * osmo_sockaddr_str_from_32 for network byte order and osmo_sockaddr_str_from_32h for host byte order. */
+int osmo_sockaddr_str_from_32n(struct osmo_sockaddr_str *sockaddr_str, uint32_t ip, uint16_t port)
+{
+	return osmo_sockaddr_str_from_32h(sockaddr_str, ip, port);
 }
 
 /*! Convert IPv4 address and port to osmo_sockaddr_str.
@@ -376,9 +383,9 @@ int osmo_sockaddr_str_to_in6_addr(const struct osmo_sockaddr_str *sockaddr_str, 
 	return 0;
 }
 
-/*! Convert osmo_sockaddr_str address string to IPv4 address data in host-byte-order.
+/*! Convert osmo_sockaddr_str address string to IPv4 address data in network-byte-order.
  * \param[in] sockaddr_str  The instance to convert the IP of.
- * \param[out] dst  IPv4 address data in 32bit host-byte-order format to write to.
+ * \param[out] dst  IPv4 address data in 32bit network-byte-order format to write to.
  * \return 0 on success, negative on error (e.g. invalid IPv4 address string).
  */
 int osmo_sockaddr_str_to_32(const struct osmo_sockaddr_str *sockaddr_str, uint32_t *ip)
@@ -396,12 +403,12 @@ int osmo_sockaddr_str_to_32(const struct osmo_sockaddr_str *sockaddr_str, uint32
 	return 0;
 }
 
-/*! Convert osmo_sockaddr_str address string to IPv4 address data in network-byte-order.
+/*! Convert osmo_sockaddr_str address string to IPv4 address data in host-byte-order.
  * \param[in] sockaddr_str  The instance to convert the IP of.
- * \param[out] dst  IPv4 address data in 32bit network-byte-order format to write to.
+ * \param[out] dst  IPv4 address data in 32bit host-byte-order format to write to.
  * \return 0 on success, negative on error (e.g. invalid IPv4 address string).
  */
-int osmo_sockaddr_str_to_32n(const struct osmo_sockaddr_str *sockaddr_str, uint32_t *ip)
+int osmo_sockaddr_str_to_32h(const struct osmo_sockaddr_str *sockaddr_str, uint32_t *ip)
 {
 	int rc;
 	uint32_t ip_h;
@@ -414,6 +421,13 @@ int osmo_sockaddr_str_to_32n(const struct osmo_sockaddr_str *sockaddr_str, uint3
 		return rc;
 	*ip = osmo_htonl(ip_h);
 	return 0;
+}
+
+/*! DEPRECATED: the name suggests a conversion to network byte order, but actually converts to host byte order. Use
+ * osmo_sockaddr_str_to_32() for network byte order and osmo_sockaddr_str_to_32h() for host byte order. */
+int osmo_sockaddr_str_to_32n(const struct osmo_sockaddr_str *sockaddr_str, uint32_t *ip)
+{
+	return osmo_sockaddr_str_to_32h(sockaddr_str, ip);
 }
 
 /*! Convert osmo_sockaddr_str address string and port to IPv4 address and port data.
