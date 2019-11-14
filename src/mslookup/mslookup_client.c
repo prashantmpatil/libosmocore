@@ -56,6 +56,26 @@ bool osmo_mslookup_client_active(struct osmo_mslookup_client *client)
 	return true;
 }
 
+static void _osmo_mslookup_client_method_del(struct osmo_mslookup_client_method *method)
+{
+	if (method->destruct)
+		method->destruct(method);
+	llist_del(&method->entry);
+	talloc_free(method);
+}
+
+/*! Stop and free mslookup client and all registered lookup methods.
+ */
+void osmo_mslookup_client_free(struct osmo_mslookup_client *client)
+{
+	struct osmo_mslookup_client_method *m, *n;
+	if (!client)
+		return;
+	llist_for_each_entry_safe(m, n, &client->lookup_methods, entry) {
+		_osmo_mslookup_client_method_del(m);
+	}
+}
+
 /*! Add an osmo_mslookup_client_method to service MS Lookup requests.
  * Note, osmo_mslookup_client_method_del() will talloc_free() the method pointer, so it needs to be dynamically
  * allocated.
@@ -77,10 +97,7 @@ bool osmo_mslookup_client_method_del(struct osmo_mslookup_client *client,
 	struct osmo_mslookup_client_method *m;
 	llist_for_each_entry(m, &client->lookup_methods, entry) {
 		if (m == method) {
-			if (method->destruct)
-				method->destruct(method);
-			llist_del(&method->entry);
-			talloc_free(method);
+			_osmo_mslookup_client_method_del(method);
 			return true;
 		}
 	}
@@ -161,7 +178,9 @@ static void timeout_cb(void *data)
 }
 
 /*! Launch a subscriber lookup with the provided query.
- * Every request *must* be followed by an osmo_mslookup_client_request_cleanup() with the returned request_handle.
+ * A request is cleared implicitly when the handling->result_cb is invoked; if the quer->priv pointer becomes invalid
+ * before that, a request should be canceled by calling osmo_mslookup_client_request_cleanup() with the returned
+ * request_handle. A request handle of zero indicates error.
  * \return a nonzero request_handle that allows ending the request, or 0 on invalid query data. */
 uint32_t osmo_mslookup_client_request(struct osmo_mslookup_client *client,
 				      const struct osmo_mslookup_query *query,
@@ -182,6 +201,7 @@ uint32_t osmo_mslookup_client_request(struct osmo_mslookup_client *client,
 	r = talloc_zero(client, struct osmo_mslookup_client_request);
 	OSMO_ASSERT(r);
 
+	/* A request_handle of zero means error, so make sure we don't use a zero handle. */
 	if (!client->next_request_handle)
 		client->next_request_handle++;
 	*r = (struct osmo_mslookup_client_request){

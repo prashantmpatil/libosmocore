@@ -30,6 +30,7 @@ void osmo_mslookup_client_request_cleanup(struct osmo_mslookup_client *client, u
 
 struct osmo_mslookup_client *osmo_mslookup_client_new(void *ctx);
 bool osmo_mslookup_client_active(struct osmo_mslookup_client *client);
+void osmo_mslookup_client_free(struct osmo_mslookup_client *client);
 
 struct osmo_mslookup_client_method {
 	struct llist_head entry;

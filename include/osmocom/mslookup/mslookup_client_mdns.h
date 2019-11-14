@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+struct osmo_mslookup_client;
+struct osmo_mslookup_client_method;
+
 /*! MS Lookup mDNS server bind default IP. Taken from the Administratevly Scoped block, particularly the Organizational
  * Scoped range, https://tools.ietf.org/html/rfc2365 . */
 #define OSMO_MSLOOKUP_MDNS_IP4 "239.192.23.42"
