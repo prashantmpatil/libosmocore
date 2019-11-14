@@ -601,6 +601,11 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (!cmdline_opts.daemon && !(argc - optind)) {
+		print_help();
+		goto program_exit;
+	}
+
 	if (cmdline_opts.quiet)
 		log_target_destroy(osmo_stderr_target);
 
