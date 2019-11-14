@@ -21,4 +21,11 @@ osmo_sim_test_SOURCES = osmo-sim-test.c
 osmo_sim_test_LDADD = $(LDADD) $(top_builddir)/src/sim/libosmosim.la $(PCSC_LIBS)
 osmo_sim_test_CFLAGS = $(PCSC_CFLAGS)
 endif
+
+if ENABLE_MSLOOKUP
+bin_PROGRAMS += osmo-mslookup-client
+osmo_mslookup_client_SOURCES = osmo-mslookup-client.c
+osmo_mslookup_client_LDADD = $(LDADD) $(top_builddir)/src/mslookup/libosmomslookup.la $(TALLOC_LIBS)
+osmo_mslookup_client_CFLAGS = $(TALLOC_CFLAGS)
+endif
 endif

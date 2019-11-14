@@ -33,6 +33,7 @@ override_dh_clean:
 	$(RM) .version
 	$(RM) debian/man/osmo-arfcn.1
 	$(RM) debian/man/osmo-auc-gen.1
+	$(RM) debian/man/osmo-mslookup-client.1
 	$(RM) include/osmocom/core/bit16gen.h
 	$(RM) include/osmocom/core/bit32gen.h
 	$(RM) include/osmocom/core/bit64gen.h

@@ -332,10 +332,11 @@ Depends: ${shlibs:Depends},
          ${misc:Depends}
 Multi-Arch: same
 Description: Utilities for gsm
- This package contains a program for frequency calculation for GSM called
- 'osmo-arfcn' and a program called 'osmo-auc-gen' that is used for testing GSM
- authentication, as well as 'osmo-config-merge', a tool for merging Osmocom
- configuration files.
+ This package contains Osmocom GSM related utility programs:
+ 'osmo-arfcn' for frequency calculation; 'osmo-auc-gen' for testing GSM
+ authentication; 'osmo-config-merge' for merging Osmocom
+ configuration files; 'osmo-mslookup-client' to query subscriber location
+ via multicast DNS.
  .
  They use the libosmocore library. The libosmocore library contain various
  utility functions that were originally developed as part of the OpenBSC
