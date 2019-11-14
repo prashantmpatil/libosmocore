@@ -87,6 +87,26 @@ bool osmo_mslookup_client_method_del(struct osmo_mslookup_client *client,
 	return false;
 }
 
+static void osmo_mslookup_request_finish(struct osmo_mslookup_client_request *r)
+{
+	struct osmo_mslookup_client *client = r->client;
+	uint32_t request_handle = r->request_handle;
+
+	if (r->result.rc == OSMO_MSLOOKUP_RC_TIMEOUT) {
+		/* Timeout cb has been fired before, don't call again. */
+		return;
+	}
+	if (r->result.rc == OSMO_MSLOOKUP_RC_NONE) {
+		/* No response has come in, and we hit a timeout. Send a timeout rc. */
+		r->result = (struct osmo_mslookup_result){ .rc = OSMO_MSLOOKUP_RC_TIMEOUT };
+	}
+	r->handling.result_cb(r->client, r->request_handle, &r->query, &r->result);
+
+	/* Make sure the request struct is discarded.
+	 * The result_cb() may already have triggered a cleanup, so query by request_handle. */
+	osmo_mslookup_client_request_cleanup(client, request_handle);
+}
+
 void osmo_mslookup_client_rx_result(struct osmo_mslookup_client *client, uint32_t request_handle,
 				    const struct osmo_mslookup_result *result)
 {
@@ -126,29 +146,18 @@ void osmo_mslookup_client_rx_result(struct osmo_mslookup_client *client, uint32_
 			req->result = *result;
 		break;
 	}
-}
 
-static void request_timeout(struct osmo_mslookup_client_request *r)
-{
-	if (r->result.rc == OSMO_MSLOOKUP_RC_TIMEOUT) {
-		/* Timeout cb has been fired before, don't call again. */
-		return;
+	/* If age == 0, it doesn't get any better, so return the result immediately. */
+	if (req->result.rc == OSMO_MSLOOKUP_RC_OK
+	    && req->result.age == 0) {
+		osmo_mslookup_request_finish(req);
 	}
-	if (r->result.rc == OSMO_MSLOOKUP_RC_NONE) {
-		/* No response has come in, and we hit a timeout. Send a timeout rc. */
-		r->result = (struct osmo_mslookup_result){ .rc = OSMO_MSLOOKUP_RC_TIMEOUT };
-	}
-	r->handling.result_cb(r->client, r->request_handle, &r->query, &r->result);
-
-	/* Mark the end of the timeout period for results that might come in too late (but before
-	 * osmo_mslookup_client_request_cleanup()) */
-	r->result.rc = OSMO_MSLOOKUP_RC_TIMEOUT;
 }
 
 static void timeout_cb(void *data)
 {
 	struct osmo_mslookup_client_request *r = data;
-	request_timeout(r);
+	osmo_mslookup_request_finish(r);
 }
 
 /*! Launch a subscriber lookup with the provided query.
@@ -188,7 +197,7 @@ uint32_t osmo_mslookup_client_request(struct osmo_mslookup_client *client,
 	llist_for_each_entry(other, &client->requests, entry) {
 		if (other->request_handle != r->request_handle)
 			continue;
-		request_timeout(other);
+		osmo_mslookup_request_finish(other);
 		/* we're sure it exists only once. */
 		break;
 	}
@@ -208,21 +217,27 @@ uint32_t osmo_mslookup_client_request(struct osmo_mslookup_client *client,
 	return r->request_handle;
 }
 
+static void _osmo_mslookup_client_request_cleanup(struct osmo_mslookup_client_request *r)
+{
+	struct osmo_mslookup_client_method *m;
+	osmo_timer_del(&r->timeout);
+	llist_for_each_entry(m, &r->client->lookup_methods, entry) {
+		if (!m->request_cleanup)
+			continue;
+		m->request_cleanup(m, r->request_handle);
+	}
+	llist_del(&r->entry);
+	talloc_free(r);
+}
+
 /*! End or cancel a subscriber lookup. This *must* be invoked exactly once per osmo_mslookup_client_request() invocation,
  * either after a lookup has concluded or to abort an ongoing lookup.
  * \param[in] request_handle  The request_handle returned by an osmo_mslookup_client_request() invocation.
  */
 void osmo_mslookup_client_request_cleanup(struct osmo_mslookup_client *client, uint32_t request_handle)
 {
-	struct osmo_mslookup_client_method *m;
 	struct osmo_mslookup_client_request *r = get_request(client, request_handle);
 	if (!r)
 		return;
-	osmo_timer_del(&r->timeout);
-	llist_for_each_entry(m, &r->client->lookup_methods, entry) {
-		if (!m->request_cleanup)
-			continue;
-		m->request_cleanup(m, request_handle);
-	}
-	llist_del(&r->entry);
+	_osmo_mslookup_client_request_cleanup(r);
 }

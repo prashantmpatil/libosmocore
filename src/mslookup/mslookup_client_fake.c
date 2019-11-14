@@ -67,13 +67,13 @@ static void fake_lookup_request_cleanup(struct osmo_mslookup_client_method *meth
 static void fake_lookup_async_response(void *data)
 {
 	struct fake_lookup_state *state = data;
-	struct fake_lookup_request *req;
+	struct fake_lookup_request *req, *n;
 	struct timeval now;
 	char str[256];
 
 	osmo_gettimeofday(&now, NULL);
 
-	llist_for_each_entry(req, &state->requests, entry) {
+	llist_for_each_entry_safe(req, n, &state->requests, entry) {
 		struct osmo_mslookup_fake_response *resp;
 
 		for (resp = state->responses;
@@ -97,6 +97,10 @@ static void fake_lookup_async_response(void *data)
 			     osmo_mslookup_result_name_b(str, sizeof(str), &req->query, &resp->result));
 			osmo_mslookup_client_rx_result(state->client, req->request_handle, &resp->result);
 			resp->sent = true;
+
+			/* The req will have been cleaned up now, so we must not iterate over state->responses anymore
+			 * with this req. */
+			break;
 		}
 	}
 

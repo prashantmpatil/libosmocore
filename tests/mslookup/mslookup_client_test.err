@@ -11,6 +11,8 @@ Total time passed: 0.800000 s
 osmo_mslookup_client_rx_result(): sip.voice.112.msisdn -> ipv4: 112.112.112.112:23 (age=235)
 Total time passed: 1.000000 s
 osmo_mslookup_client_rx_result(): gsup.hlr.1234567.imsi -> ipv4: 12.34.56.7:42 -> ipv6: [be:ef:ed:ca:fe:fa:ce::1]:42 (age=0)
+result_cb(): gsup.hlr.1234567.imsi -> ipv4: 12.34.56.7:42 -> ipv6: [be:ef:ed:ca:fe:fa:ce::1]:42 (age=0)
+fake_lookup_request_cleanup() ok
 Total time passed: 1.200000 s
 osmo_mslookup_client_rx_result(): sip.voice.112.msisdn -> ipv4: 99.99.99.99:999 -> ipv6: 9999:9999:9999::9:999 (age=335)
 Total time passed: 1.400000 s
@@ -18,8 +20,6 @@ Total time passed: 1.600000 s
 osmo_mslookup_client_rx_result(): sip.voice.112.msisdn -> ipv4: 99.99.99.99:999 (age=999)
 Total time passed: 1.800000 s
 Total time passed: 2.000000 s
-result_cb(): gsup.hlr.1234567.imsi -> ipv4: 12.34.56.7:42 -> ipv6: [be:ef:ed:ca:fe:fa:ce::1]:42 (age=0)
-fake_lookup_request_cleanup() ok
 Total time passed: 2.200000 s
 Total time passed: 2.400000 s
 Total time passed: 2.600000 s
