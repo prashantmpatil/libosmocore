@@ -22,7 +22,6 @@ libosmomslookup_la_SOURCES = \
 	mslookup_client.c \
 	mslookup_client_mdns.c \
 	mslookup_client_fake.c \
-	mslookup_client_simple_api.c \
 	$(NULL)
 
 libosmomslookup_la_LDFLAGS = -version-info $(LIBVERSION)

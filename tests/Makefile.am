@@ -359,7 +359,6 @@ EXTRA_DIST = testsuite.at $(srcdir)/package.m4 $(TESTSUITE)		\
 	     mdns_test.ok \
 	     mslookup_client_mdns_test.err \
 	     mslookup_client_test.err \
-	     mslookup_ctypes_test.py \
 	     mslookup_test.ok \
 	     $(NULL)
 
