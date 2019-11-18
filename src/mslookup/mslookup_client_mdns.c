@@ -10,6 +10,10 @@
 #include <osmocom/mslookup/mdns.h>
 #include <osmocom/mslookup/mdns_sock.h>
 
+/* FIXME: to be replaced with new mdns.h api calls */
+#include "mdns_msg.h"
+#include "mdns_record.h"
+
 struct osmo_mdns_method_state {
 	/* Parameters passed by _add_method_dns() */
 	struct osmo_sockaddr_str bind_addr;
@@ -25,20 +29,20 @@ struct osmo_mdns_method_request {
 	struct llist_head entry;
 	uint32_t request_handle;
 	struct osmo_mslookup_query query;
-	struct osmo_mdns_request dns_req;
+	struct osmo_mdns_msg_request dns_req;
 };
 
 static int sock_addrstr_from_mdns_record(struct osmo_sockaddr_str *sockaddr_str, struct osmo_mdns_record *rec)
 {
 	switch (rec->type) {
-		case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_A:
+		case OSMO_MDNS_RFC_RECORD_TYPE_A:
 			if (rec->length != 4) {
 				LOGP(DLMSLOOKUP, LOGL_ERROR, "unexpected length of A record\n");
 				return -EINVAL;
 			}
 			osmo_sockaddr_str_from_32(sockaddr_str, *(uint32_t *)rec->data, 0);
 			break;
-		case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_AAAA:
+		case OSMO_MDNS_RFC_RECORD_TYPE_AAAA:
 			if (rec->length != 16) {
 				LOGP(DLMSLOOKUP, LOGL_ERROR, "unexpected length of AAAA record\n");
 				return -EINVAL;
@@ -56,7 +60,7 @@ static int sock_addrstr_from_mdns_record(struct osmo_sockaddr_str *sockaddr_str,
  *  Either "age", ip_v4/v6, "port" (only IPv4 or IPv6 present)
  *  or "age", ip_v4, "port", ip_v6, "port" (both IPv4 and v6 present).
  * "age" and "port" are TXT records, ip_v4 is an A record, ip_v6 is an AAAA record. */
-struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns_answer *ans)
+struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns_msg_answer *ans)
 {
 	struct osmo_mdns_record *rec, *rec_prev;
 	char *txt_key;
@@ -69,7 +73,7 @@ struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns
 
 	llist_for_each_entry(rec, &ans->records, list) {
 		switch (rec->type) {
-			case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_A:
+			case OSMO_MDNS_RFC_RECORD_TYPE_A:
 				if (found_ip_v4) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "'A' record found twice in mDNS answer\n");
 					goto error;
@@ -78,7 +82,7 @@ struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns
 				if (sock_addrstr_from_mdns_record(&ret->host_v4, rec) != 0)
 					goto error;
 				break;
-			case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_AAAA:
+			case OSMO_MDNS_RFC_RECORD_TYPE_AAAA:
 				if (found_ip_v6) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "'AAAA' record found twice in mDNS answer\n");
 					goto error;
@@ -87,8 +91,8 @@ struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns
 				if (sock_addrstr_from_mdns_record(&ret->host_v6, rec) != 0)
 					goto error;
 				break;
-			case OSMO_MSLOOKUP_MDNS_RECORD_TYPE_TXT:
-				if (osmo_mdns_decode_txt_record(ret, rec, &txt_key, &txt_value) != 0) {
+			case OSMO_MDNS_RFC_RECORD_TYPE_TXT:
+				if (osmo_mdns_record_txt_decode(ret, rec, &txt_key, &txt_value) != 0) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "failed to decode txt record\n");
 					goto error;
 				}
@@ -108,13 +112,13 @@ struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns
 					}
 
 					rec_prev = (struct osmo_mdns_record *) rec->list.prev;
-					if (rec_prev->type != OSMO_MSLOOKUP_MDNS_RECORD_TYPE_A &&
-					    rec_prev->type != OSMO_MSLOOKUP_MDNS_RECORD_TYPE_AAAA) {
+					if (rec_prev->type != OSMO_MDNS_RFC_RECORD_TYPE_A &&
+					    rec_prev->type != OSMO_MDNS_RFC_RECORD_TYPE_AAAA) {
 						LOGP(DLMSLOOKUP, LOGL_ERROR, "'TXT' record for 'port' without previous"
 									     " 'A' or 'AAAA' record\n");
 						goto error;
 					}
-					if (rec_prev->type == OSMO_MSLOOKUP_MDNS_RECORD_TYPE_A)
+					if (rec_prev->type == OSMO_MDNS_RFC_RECORD_TYPE_A)
 						ret->host_v4.port = atoi(txt_value);
 					else
 						ret->host_v6.port = atoi(txt_value);
@@ -146,7 +150,7 @@ error:
 }
 
 static int request_handle_by_answer(uint32_t *request_handle, struct osmo_mdns_method_state *state,
-			     struct osmo_mdns_answer *ans)
+			     struct osmo_mdns_msg_answer *ans)
 {
 	struct osmo_mdns_method_request *request;
 
@@ -169,7 +173,7 @@ static int request_handle_by_answer(uint32_t *request_handle, struct osmo_mdns_m
 
 static int mdns_method_recv(struct osmo_fd *osmo_fd, unsigned int what)
 {
-	struct osmo_mdns_answer *ans = NULL;
+	struct osmo_mdns_msg_answer *ans = NULL;
 	struct osmo_mdns_method_state *state = osmo_fd->data;
 	struct osmo_mslookup_result *result = NULL;
 	int n;
@@ -183,7 +187,7 @@ static int mdns_method_recv(struct osmo_fd *osmo_fd, unsigned int what)
 		return n;
 	}
 
-	ans = osmo_mdns_decode_answer(ctx, buffer, n);
+	ans = osmo_mdns_msg_answer_decode(ctx, buffer, n);
 	if (!ans) {
 		LOGP(DLMSLOOKUP, LOGL_ERROR, "received something that is not a valid mDNS answer, ignoring\n");
 		return -EINVAL;
@@ -233,8 +237,8 @@ static void mdns_method_request(struct osmo_mslookup_client_method *method, cons
 	r->dns_req.domain = talloc_asprintf(method->client, "%s.%s.%s", query->service, query->id.imsi,
 					    osmo_mslookup_id_type_name(query->id.type));
 	/* Always request all records, mslookup server will reply at most with both IPv4 and IPv6. */
-	r->dns_req.type = OSMO_MSLOOKUP_MDNS_RECORD_TYPE_ALL;
-	osmo_mdns_encode_request(ctx, msg, &r->dns_req);
+	r->dns_req.type = OSMO_MDNS_RFC_RECORD_TYPE_ALL;
+	osmo_mdns_msg_request_encode(ctx, msg, &r->dns_req);
 
 	/* Send over the wire */
 	LOGP(DLMSLOOKUP, LOGL_DEBUG, "sending mDNS query: how to reach %s?\n", r->dns_req.domain);

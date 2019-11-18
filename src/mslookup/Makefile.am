@@ -10,18 +10,23 @@ AM_LDFLAGS = $(COVERAGE_LDFLAGS)
 if ENABLE_MSLOOKUP
 
 noinst_HEADERS = \
-	mdns_internal.h \
+	mdns_msg.h \
+	mdns_record.h \
+	mdns_rfc.h \
 	$(NULL)
 
 lib_LTLIBRARIES = libosmomslookup.la
 
 libosmomslookup_la_SOURCES = \
 	mdns.c \
+	mdns_msg.c \
+	mdns_record.c \
+	mdns_rfc.c \
 	mdns_sock.c \
 	mslookup.c \
 	mslookup_client.c \
-	mslookup_client_mdns.c \
 	mslookup_client_fake.c \
+	mslookup_client_mdns.c \
 	$(NULL)
 
 libosmomslookup_la_LDFLAGS = -version-info $(LIBVERSION)
