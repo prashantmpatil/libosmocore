@@ -1,5 +1,6 @@
 #pragma once
 #include <osmocom/core/msgb.h>
+#include <osmocom/core/select.h>
 
 struct osmo_mdns_sock {
 	struct osmo_fd osmo_fd;
