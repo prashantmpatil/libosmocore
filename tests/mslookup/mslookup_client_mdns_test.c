@@ -17,7 +17,7 @@ void *ctx = NULL;
 #define TEST_IP OSMO_MSLOOKUP_MDNS_IP4
 #define TEST_PORT OSMO_MSLOOKUP_MDNS_PORT
 
-struct osmo_mslookup_result *result_from_mdns_answer(void *ctx, struct osmo_mdns_msg_answer *ans);
+int result_from_answer(struct osmo_mslookup_result *result, struct osmo_mdns_msg_answer *ans);
 
 static uint8_t ip_v4_n[] = {0x2a, 0x2a, 0x2a, 0x2a};
 static uint8_t ip_v6_n[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
@@ -28,6 +28,8 @@ static uint8_t ip_v6_n[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
  */
 struct osmo_mdns_sock *server_mc;
 
+
+/* FIXME: use osmo_mdns_result_encode() */
 static void server_reply(struct osmo_mdns_msg_request *req)
 {
 	int rc;
@@ -202,7 +204,7 @@ static void test_server_client()
 }
 
 /*
- * Decoding test for result_from_mdns_answer()
+ * Decoding test for result_from_answer()
  */
 enum test_records {
 	RECORD_NONE,
@@ -215,14 +217,14 @@ enum test_records {
 	RECORD_TXT_INVALID_NO_KEY_VALUE,
 	RECORD_INVALID,
 };
-struct result_from_mdns_answer_test {
+struct result_from_answer_test {
 	const char *desc;
 	const enum test_records records[5];
 	bool error;
 	const struct osmo_mslookup_result res;
 };
 
-static void test_result_from_mdns_answer()
+static void test_result_from_answer()
 {
 	struct osmo_sockaddr_str test_host_v4 = {.af = AF_INET, .port=444, .ip = "42.42.42.42"};
 	struct osmo_sockaddr_str test_host_v6 = {.af = AF_INET6, .port=666,
@@ -233,7 +235,7 @@ static void test_result_from_mdns_answer()
 						      .host_v6 = test_host_v6};
 	struct osmo_mslookup_result test_result_v4_v6 = {.rc = OSMO_MSLOOKUP_RC_OK, .age = 3,
 							 .host_v4 = test_host_v4, .host_v6 = test_host_v6};
-	struct result_from_mdns_answer_test result_from_mdns_answer_data[] = {
+	struct result_from_answer_test result_from_answer_data[] = {
 		{
 			.desc = "IPv4",
 			.records = {RECORD_TXT_AGE, RECORD_A, RECORD_TXT_PORT_444},
@@ -309,11 +311,12 @@ static void test_result_from_mdns_answer()
 	int j = 0;
 
 	fprintf(stderr, "-- %s --\n", __func__);
-	for (i = 0; i < ARRAY_SIZE(result_from_mdns_answer_data); i++) {
-		struct result_from_mdns_answer_test *t = &result_from_mdns_answer_data[i];
+	for (i = 0; i < ARRAY_SIZE(result_from_answer_data); i++) {
+		struct result_from_answer_test *t = &result_from_answer_data[i];
 		struct osmo_mdns_msg_answer ans = {0};
-		struct osmo_mslookup_result *res;
+		struct osmo_mslookup_result res = {0};
 		void *ctx_test = talloc_named_const(ctx, 0, t->desc);
+		bool is_error;
 
 		fprintf(stderr, "---\n");
 		fprintf(stderr, "test: %s\n", t->desc);
@@ -374,13 +377,12 @@ static void test_result_from_mdns_answer()
 		}
 
 		/* Verify output */
-		res = result_from_mdns_answer(ctx, &ans);
-		OSMO_ASSERT(t->error == (res == NULL));
+		is_error = (result_from_answer(&res, &ans) != 0);
+		OSMO_ASSERT(t->error == is_error);
 		if (!t->error) {
 			fprintf(stderr, "exp: %s\n", osmo_hexdump((unsigned char *)&t->res, sizeof(t->res)));
-			fprintf(stderr, "res: %s\n", osmo_hexdump((unsigned char *)res, sizeof(t->res)));
-			OSMO_ASSERT(memcmp(res, &t->res, sizeof(t->res)) == 0);
-			talloc_free(res);
+			fprintf(stderr, "res: %s\n", osmo_hexdump((unsigned char *)&res, sizeof(t->res)));
+			OSMO_ASSERT(memcmp(&res, &t->res, sizeof(t->res)) == 0);
 		}
 
 		talloc_free(ctx_test);
@@ -406,7 +408,7 @@ int main()
 	fake_time_start();
 
 	test_server_client();
-	test_result_from_mdns_answer();
+	test_result_from_answer();
 
 	return 0;
 }

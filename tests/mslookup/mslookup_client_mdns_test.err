@@ -6,18 +6,15 @@ client_query
 sending mDNS query: how to reach gsup.hlr.123456789012345.imsi?
 server_recv
 received request for: gsup.hlr.123456789012345.imsi
-received something that is not a valid mDNS answer, ignoring
 server_recv
 received something that is not a valid DNS request, ignoring
 (server and client listen on same IP and port in this test, so this was probably the server's own answer, this is expected)
-received mDNS answer for id=0, domain=gsup.hlr.123456789012345.imsi
-possible mDNS result for domain=gsup.hlr.123456789012345.imsi -> ipv4: 42.42.42.42:444 -> ipv6: [1122:3344:5566:7788:99aa:bbcc:ddee:ff00]:666 (age=3)
 Total time passed: 5.000000 s
 client_recv
 client_recv(): gsup.hlr.123456789012345.imsi -> ipv4: 42.42.42.42:444 -> ipv6: [1122:3344:5566:7788:99aa:bbcc:ddee:ff00]:666 (age=3)
 server_stop
 client_stop
--- test_result_from_mdns_answer --
+-- test_result_from_answer --
 ---
 test: IPv4
 error: false
