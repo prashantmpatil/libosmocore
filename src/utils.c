@@ -523,6 +523,32 @@ size_t osmo_strlcpy(char *dst, const char *src, size_t siz)
 	return ret;
 }
 
+/*! Like osmo_strlcpy(), but limit the input string by a length.
+ * Safely copy a string token with given length to a destination buffer,
+ * ensuring nul termination at the destination.
+ * \param[out] dst  Destination buffer.
+ * \param[in] dst_size  sizeof(dst).
+ * \param[in] src  Source string, possibly nul terminated.
+ * \param[in] token_len  Copy at most this many characters (not counting nul).
+ * \return src_len, or strlen(src), whichever is shorter.
+ */
+size_t osmo_token_copy(char *dst, size_t dst_size, const char *src, size_t token_len)
+{
+	size_t ret = 0;
+	size_t copy_len = 0;
+	if (src)
+		ret = strnlen(src, token_len);
+	else
+		token_len = 0;
+	if (dst_size)
+		copy_len = OSMO_MIN(dst_size - 1, token_len);
+	if (dst && src && copy_len)
+		strncpy(dst, src, copy_len);
+	if (copy_len < dst_size)
+		dst[copy_len] = '\0';
+	return ret;
+}
+
 /*! Validate that a given string is a hex string within given size limits.
  * Note that each hex digit amounts to a nibble, so if checking for a hex
  * string to result in N bytes, pass amount of digits as 2*N.
