@@ -1,5 +1,3 @@
-#include "../../src/mslookup/mdns_msg.h"
-#include "../../src/mslookup/mdns_record.h"
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
