@@ -1,5 +1,5 @@
 #include "../../src/mslookup/mdns_msg.h"
-#include "../../src/mslookup/mdns_record.h" /* FIXME: use new mdns.h api instead */
+#include "../../src/mslookup/mdns_record.h"
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -29,55 +29,29 @@ static uint8_t ip_v6_n[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
 struct osmo_mdns_sock *server_mc;
 
 
-/* FIXME: use osmo_mdns_result_encode() */
-static void server_reply(struct osmo_mdns_msg_request *req)
+static void server_reply(struct osmo_mslookup_query *query, uint16_t packet_id)
 {
 	int rc;
+	struct osmo_mslookup_result result = {0};
 	struct msgb *msg;
-	struct osmo_mdns_msg_answer ans = {0};
-	struct osmo_mdns_record *rec_age;
-	struct osmo_mdns_record rec_ip_v4 = {0};
-	struct osmo_mdns_record *rec_ip_v4_port;
-	struct osmo_mdns_record rec_ip_v6 = {0};
-	struct osmo_mdns_record *rec_ip_v6_port;
 
-	ans.id = req->id;
-	ans.domain = req->domain;
-	INIT_LLIST_HEAD(&ans.records);
-
-	rec_age = osmo_mdns_record_txt_encode(ctx, "age", "3");
-	OSMO_ASSERT(rec_age);
-	llist_add_tail(&rec_age->list, &ans.records);
-
-	rec_ip_v4.type = OSMO_MDNS_RFC_RECORD_TYPE_A;
-	rec_ip_v4.data = ip_v4_n;
-	rec_ip_v4.length = sizeof(ip_v4_n);
-	llist_add_tail(&rec_ip_v4.list, &ans.records);
-
-	rec_ip_v4_port = osmo_mdns_record_txt_encode(ctx, "port", "444");
-	OSMO_ASSERT(rec_ip_v4_port);
-	llist_add_tail(&rec_ip_v4_port->list, &ans.records);
-
-	rec_ip_v6.type = OSMO_MDNS_RFC_RECORD_TYPE_AAAA;
-	rec_ip_v6.data = ip_v6_n;
-	rec_ip_v6.length = sizeof(ip_v6_n);
-	llist_add_tail(&rec_ip_v6.list, &ans.records);
-
-	rec_ip_v6_port = osmo_mdns_record_txt_encode(ctx, "port", "666");
-	OSMO_ASSERT(rec_ip_v6_port);
-	llist_add_tail(&rec_ip_v6_port->list, &ans.records);
+	result.rc = OSMO_MSLOOKUP_RC_OK;
+	result.age = 3;
+	osmo_sockaddr_str_from_str(&result.host_v4, "42.42.42.42", 444);
+	osmo_sockaddr_str_from_str(&result.host_v6, "1122:3344:5566:7788:99aa:bbcc:ddee:ff00", 666);
 
 	msg = msgb_alloc(1024, __func__);
-	rc = osmo_mdns_msg_answer_encode(ctx, msg, &ans);
+	rc = osmo_mdns_result_encode(ctx, msg, packet_id, query, &result);
 	OSMO_ASSERT(rc == 0);
 	OSMO_ASSERT(osmo_mdns_sock_send(server_mc, msg) == 0);
 }
 
 static int server_recv(struct osmo_fd *osmo_fd, unsigned int what)
 {
-	struct osmo_mdns_msg_request *req;
 	int n;
 	uint8_t buffer[1024];
+	uint16_t packet_id;
+	struct osmo_mslookup_query *query;
 
 	fprintf(stderr, "%s\n", __func__);
 
@@ -85,16 +59,13 @@ static int server_recv(struct osmo_fd *osmo_fd, unsigned int what)
 	n = read(osmo_fd->fd, buffer, sizeof(buffer));
 	OSMO_ASSERT(n >= 0);
 
-	req = osmo_mdns_msg_request_decode(ctx, buffer, n);
-	if (!req) {
-		fprintf(stderr, "received something that is not a valid DNS request, ignoring\n");
-		fprintf(stderr, "(server and client listen on same IP and port in this test, so this was probably the"
-				" server's own answer, this is expected)\n");
-		return -1;
-	}
-	fprintf(stderr, "received request for: %s\n", req->domain);
-	server_reply(req);
-	talloc_free(req);
+	query = osmo_mdns_query_decode(ctx, buffer, n, &packet_id);
+	if (!query)
+		return -1; /* server receiving own answer is expected */
+
+	fprintf(stderr, "received request\n");
+	server_reply(query, packet_id);
+	talloc_free(query);
 	return n;
 }
 

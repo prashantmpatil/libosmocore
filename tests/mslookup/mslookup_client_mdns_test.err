@@ -5,10 +5,8 @@ client_init
 client_query
 sending mDNS query: how to reach gsup.hlr.123456789012345.imsi?
 server_recv
-received request for: gsup.hlr.123456789012345.imsi
+received request
 server_recv
-received something that is not a valid DNS request, ignoring
-(server and client listen on same IP and port in this test, so this was probably the server's own answer, this is expected)
 Total time passed: 5.000000 s
 client_recv
 client_recv(): gsup.hlr.123456789012345.imsi -> ipv4: 42.42.42.42:444 -> ipv6: [1122:3344:5566:7788:99aa:bbcc:ddee:ff00]:666 (age=3)
