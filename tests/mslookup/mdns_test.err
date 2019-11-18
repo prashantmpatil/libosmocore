@@ -1,4 +1,4 @@
--- test_enc_dec_qname --
+-- test_enc_dec_rfc_qname --
 domain: "hlr.1234567.imsi"
 exp: "\3hlr\a1234567\4imsi"
 res: "\3hlr\a1234567\4imsi"
@@ -80,7 +80,7 @@ exp: NULL
 res: NULL
 => OK
 
--- test_enc_dec_section_header --
+-- test_enc_dec_rfc_header --
 header in:
 .id = 1337
 .qr = 0
@@ -128,7 +128,7 @@ header in:
 .ancount = 1111
 .nscount = 2222
 .arcount = 3333
-encoded: 00 2a e5 35 04 d2 04 57 08 ae 0d 05 
+encoded: 00 2a 97 a3 04 d2 04 57 08 ae 0d 05 
 header out:
 .id = 42
 .qr = 1
@@ -143,14 +143,14 @@ header out:
 .ancount = 1111
 .nscount = 2222
 .arcount = 3333
-in (hexdump):  2a 00 e5 35 d2 04 57 04 ae 08 05 0d 
-out (hexdump): 2a 00 e5 35 d2 04 57 04 ae 08 05 0d 
+in (hexdump):  2a 00 97 a3 d2 04 57 04 ae 08 05 0d 
+out (hexdump): 2a 00 97 a3 d2 04 57 04 ae 08 05 0d 
 => OK
 
--- test_enc_dec_section_header_einval --
+-- test_enc_dec_rfc_header_einval --
 => OK
 
--- test_enc_dec_section_question --
+-- test_enc_dec_rfc_question --
 question in:
 .domain = hlr.1234567.imsi
 .qtype = 255
@@ -184,10 +184,10 @@ question out:
 .qclass = 255
 => OK
 
--- test_enc_dec_section_question_null --
+-- test_enc_dec_rfc_question_null --
 => OK
 
--- test_enc_dec_resource_record --
+-- test_enc_dec_rfc_record --
 question in:
 .domain = hlr.1234567.imsi
 .type = 1
@@ -206,3 +206,131 @@ question out:
 .rdata = "10.42.2.1"
 => OK
 
+-- test_result_from_answer --
+---
+test: IPv4
+error: false
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+exp: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 
+res: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 
+=> OK
+---
+test: IPv6
+error: false
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+exp: 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+res: 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+=> OK
+---
+test: IPv4 + IPv6
+error: false
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+exp: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+res: 01 00 00 00 02 00 00 00 34 32 2e 34 32 2e 34 32 2e 34 32 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 bc 01 0a 00 00 00 31 31 32 32 3a 33 33 34 34 3a 35 35 36 36 3a 37 37 38 38 3a 39 39 61 61 3a 62 62 63 63 3a 64 64 65 65 3a 66 66 30 30 00 00 00 00 00 00 00 9a 02 03 00 00 00 
+=> OK
+---
+test: A twice
+error: true
+records:
+- TXT age=3
+- A 42.42.42.42
+- TXT port=444
+- A 42.42.42.42
+DLMSLOOKUP ERROR 'A' record found twice in mDNS answer
+=> OK
+---
+test: AAAA twice
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=444
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+DLMSLOOKUP ERROR 'AAAA' record found twice in mDNS answer
+=> OK
+---
+test: invalid TXT: no key/value pair
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT 12345
+DLMSLOOKUP ERROR failed to decode txt record
+=> OK
+---
+test: age twice
+error: true
+records:
+- TXT age=3
+- TXT age=3
+DLMSLOOKUP ERROR 'TXT' record for 'age' found twice in mDNS answer
+=> OK
+---
+test: port as first record
+error: true
+records:
+- TXT port=444
+DLMSLOOKUP ERROR 'TXT' record for 'port' without previous record
+=> OK
+---
+test: port without previous ip record
+error: true
+records:
+- TXT age=3
+- TXT port=444
+DLMSLOOKUP ERROR 'TXT' record for 'port' without previous 'A' or 'AAAA' record
+=> OK
+---
+test: invalid TXT: invalid key
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT hello=world
+DLMSLOOKUP ERROR unexpected key 'hello' in TXT record
+=> OK
+---
+test: unexpected record type
+error: true
+records:
+- TXT age=3
+- (invalid)
+DLMSLOOKUP ERROR unexpected record type
+=> OK
+---
+test: missing record: age
+error: true
+records:
+- A 42.42.42.42
+- TXT port=444
+DLMSLOOKUP ERROR missing resource records in mDNS answer
+=> OK
+---
+test: missing record: port for ipv4
+error: true
+records:
+- TXT age=3
+- A 42.42.42.42
+DLMSLOOKUP ERROR missing resource records in mDNS answer
+=> OK
+---
+test: missing record: port for ipv4 #2
+error: true
+records:
+- TXT age=3
+- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00
+- TXT port=666
+- A 42.42.42.42
+DLMSLOOKUP ERROR missing resource records in mDNS answer
+=> OK

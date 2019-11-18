@@ -114,50 +114,50 @@ void test_enc_dec_rfc_qname(void *ctx)
 	char quote_buf[300];
 	int i;
 
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 
 	for (i = 0; i < ARRAY_SIZE(qname_enc_dec_test_data); i++) {
 		const struct qname_enc_dec_test *t = &qname_enc_dec_test_data[i];
 		char *res;
 
 		if (t->domain) {
-			printf("domain: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->domain, -1));
-			printf("exp: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->qname, -1));
+			fprintf(stderr, "domain: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->domain, -1));
+			fprintf(stderr, "exp: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->qname, -1));
 			res = osmo_mdns_rfc_qname_encode(ctx, t->domain);
-			printf("res: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), res, -1));
+			fprintf(stderr, "res: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), res, -1));
 			if (t->qname == res || (t->qname && res && strcmp(t->qname, res) == 0))
-				printf("=> OK\n");
+				fprintf(stderr, "=> OK\n");
 			else
-				printf("=> ERROR\n");
+				fprintf(stderr, "=> ERROR\n");
 			if (res)
 				talloc_free(res);
-			printf("\n");
+			fprintf(stderr, "\n");
 		}
 
 		if (t->qname) {
 			size_t qname_max_len = t->qname_max_len;
 			if (qname_max_len)
-				printf("qname_max_len: %lu\n", qname_max_len);
+				fprintf(stderr, "qname_max_len: %lu\n", qname_max_len);
 			else
 				qname_max_len = strlen(t->qname) + 1;
 
-			printf("qname: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->qname, -1));
-			printf("exp: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->domain, -1));
+			fprintf(stderr, "qname: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->qname, -1));
+			fprintf(stderr, "exp: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), t->domain, -1));
 			res = osmo_mdns_rfc_qname_decode(ctx, t->qname, qname_max_len);
-			printf("res: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), res, -1));
+			fprintf(stderr, "res: %s\n", osmo_quote_str_buf2(quote_buf, sizeof(quote_buf), res, -1));
 			if (t->domain == res || (t->domain && res && strcmp(t->domain, res) == 0))
-				printf("=> OK\n");
+				fprintf(stderr, "=> OK\n");
 			else
-				printf("=> ERROR\n");
+				fprintf(stderr, "=> ERROR\n");
 			if (res)
 				talloc_free(res);
-			printf("\n");
+			fprintf(stderr, "\n");
 		}
 	}
 }
 
 #define PRINT_HDR(hdr, name) \
-	printf("header %s:\n" \
+	fprintf(stderr, "header %s:\n" \
 	       ".id = %i\n" \
 	       ".qr = %i\n" \
 	       ".opcode = %x\n" \
@@ -202,7 +202,7 @@ void test_enc_dec_rfc_header()
 {
 	int i;
 
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 	for (i = 0; i< ARRAY_SIZE(header_enc_dec_test_data); i++) {
 		const struct osmo_mdns_rfc_header in = header_enc_dec_test_data[i];
 		struct osmo_mdns_rfc_header out = {0};
@@ -210,15 +210,15 @@ void test_enc_dec_rfc_header()
 
 		PRINT_HDR(in, "in");
 		osmo_mdns_rfc_header_encode(msg, &in);
-		printf("encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
+		fprintf(stderr, "encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
 		assert(osmo_mdns_rfc_header_decode(msgb_data(msg), msgb_length(msg), &out) == 0);
 		PRINT_HDR(out, "out");
 
-		printf("in (hexdump):  %s\n", osmo_hexdump((unsigned char *)&in, sizeof(in)));
-		printf("out (hexdump): %s\n", osmo_hexdump((unsigned char *)&out, sizeof(out)));
+		fprintf(stderr, "in (hexdump):  %s\n", osmo_hexdump((unsigned char *)&in, sizeof(in)));
+		fprintf(stderr, "out (hexdump): %s\n", osmo_hexdump((unsigned char *)&out, sizeof(out)));
 		assert(memcmp(&in, &out, sizeof(in)) == 0);
 
-		printf("=> OK\n\n");
+		fprintf(stderr, "=> OK\n\n");
 		msgb_free(msg);
 	}
 }
@@ -227,16 +227,16 @@ void test_enc_dec_rfc_header_einval()
 {
 	struct osmo_mdns_rfc_header out = {0};
 	struct msgb *msg = msgb_alloc(4096, "dns_test");
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 
 	assert(osmo_mdns_rfc_header_decode(msgb_data(msg), 11, &out) == -EINVAL);
-	printf("=> OK\n\n");
+	fprintf(stderr, "=> OK\n\n");
 
 	msgb_free(msg);
 }
 
 #define PRINT_QST(qst, name) \
-	printf("question %s:\n" \
+	fprintf(stderr, "question %s:\n" \
 	       ".domain = %s\n" \
 	       ".qtype = %i\n" \
 	       ".qclass = %i\n", \
@@ -264,7 +264,7 @@ void test_enc_dec_rfc_question(void *ctx)
 {
 	int i;
 
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 	for (i = 0; i< ARRAY_SIZE(question_enc_dec_test_data); i++) {
 		const struct osmo_mdns_rfc_question in = question_enc_dec_test_data[i];
 		struct osmo_mdns_rfc_question *out;
@@ -272,21 +272,21 @@ void test_enc_dec_rfc_question(void *ctx)
 
 		PRINT_QST(&in, "in");
 		assert(osmo_mdns_rfc_question_encode(ctx, msg, &in) == 0);
-		printf("encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
+		fprintf(stderr, "encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
 		out = osmo_mdns_rfc_question_decode(ctx, msgb_data(msg), msgb_length(msg));
 		assert(out);
 		PRINT_QST(out, "out");
 
 		if (strcmp(in.domain, out->domain) != 0)
-			printf("=> ERROR: domain does not match\n");
+			fprintf(stderr, "=> ERROR: domain does not match\n");
 		else if (in.qtype != out->qtype)
-			printf("=> ERROR: qtype does not match\n");
+			fprintf(stderr, "=> ERROR: qtype does not match\n");
 		else if (in.qclass != out->qclass)
-			printf("=> ERROR: qclass does not match\n");
+			fprintf(stderr, "=> ERROR: qclass does not match\n");
 		else
-			printf("=> OK\n");
+			fprintf(stderr, "=> OK\n");
 
-		printf("\n");
+		fprintf(stderr, "\n");
 		msgb_free(msg);
 		talloc_free(out);
 	}
@@ -296,13 +296,13 @@ void test_enc_dec_rfc_question_null(void *ctx)
 {
 	uint8_t data[5] = {0};
 
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 	assert(osmo_mdns_rfc_question_decode(ctx, data, sizeof(data)) == NULL);
-	printf("=> OK\n\n");
+	fprintf(stderr, "=> OK\n\n");
 }
 
 #define PRINT_REC(rec, name) \
-	printf("question %s:\n" \
+	fprintf(stderr, "question %s:\n" \
 	       ".domain = %s\n" \
 	       ".type = %i\n" \
 	       ".class = %i\n" \
@@ -327,7 +327,7 @@ void test_enc_dec_rfc_record(void *ctx)
 {
 	int i;
 
-	printf("-- %s --\n", __func__);
+	fprintf(stderr, "-- %s --\n", __func__);
 	for (i=0; i< ARRAY_SIZE(record_enc_dec_test_data); i++) {
 		const struct osmo_mdns_rfc_record in = record_enc_dec_test_data[i];
 		struct osmo_mdns_rfc_record *out;
@@ -336,30 +336,224 @@ void test_enc_dec_rfc_record(void *ctx)
 
 		PRINT_REC(&in, "in");
 		assert(osmo_mdns_rfc_record_encode(ctx, msg, &in) == 0);
-		printf("encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
+		fprintf(stderr, "encoded: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
 		out = osmo_mdns_rfc_record_decode(ctx, msgb_data(msg), msgb_length(msg), &record_len);
-		printf("record_len: %lu\n", record_len);
+		fprintf(stderr, "record_len: %lu\n", record_len);
 		assert(out);
 		PRINT_REC(out, "out");
 
 		if (strcmp(in.domain, out->domain) != 0)
-			printf("=> ERROR: domain does not match\n");
+			fprintf(stderr, "=> ERROR: domain does not match\n");
 		else if (in.type != out->type)
-			printf("=> ERROR: type does not match\n");
+			fprintf(stderr, "=> ERROR: type does not match\n");
 		else if (in.class != out->class)
-			printf("=> ERROR: class does not match\n");
+			fprintf(stderr, "=> ERROR: class does not match\n");
 		else if (in.ttl != out->ttl)
-			printf("=> ERROR: ttl does not match\n");
+			fprintf(stderr, "=> ERROR: ttl does not match\n");
 		else if (in.rdlength != out->rdlength)
-			printf("=> ERROR: rdlength does not match\n");
+			fprintf(stderr, "=> ERROR: rdlength does not match\n");
 		else if (memcmp(in.rdata, out->rdata, in.rdlength) != 0)
-			printf("=> ERROR: rdata does not match\n");
+			fprintf(stderr, "=> ERROR: rdata does not match\n");
 		else
-			printf("=> OK\n");
+			fprintf(stderr, "=> OK\n");
 
-		printf("\n");
+		fprintf(stderr, "\n");
 		msgb_free(msg);
 		talloc_free(out);
+	}
+}
+
+/*
+ * Decoding test for result_from_answer()
+ */
+int result_from_answer(struct osmo_mslookup_result *result, struct osmo_mdns_msg_answer *ans);
+
+static uint8_t ip_v4_n[] = {0x2a, 0x2a, 0x2a, 0x2a};
+static uint8_t ip_v6_n[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+			    0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00};
+
+
+enum test_records {
+	RECORD_NONE,
+	RECORD_A,
+	RECORD_AAAA,
+	RECORD_TXT_AGE,
+	RECORD_TXT_PORT_444,
+	RECORD_TXT_PORT_666,
+	RECORD_TXT_INVALID_KEY,
+	RECORD_TXT_INVALID_NO_KEY_VALUE,
+	RECORD_INVALID,
+};
+struct result_from_answer_test {
+	const char *desc;
+	const enum test_records records[5];
+	bool error;
+	const struct osmo_mslookup_result res;
+};
+
+static void test_result_from_answer(void *ctx)
+{
+	struct osmo_sockaddr_str test_host_v4 = {.af = AF_INET, .port=444, .ip = "42.42.42.42"};
+	struct osmo_sockaddr_str test_host_v6 = {.af = AF_INET6, .port=666,
+						 .ip = "1122:3344:5566:7788:99aa:bbcc:ddee:ff00"};
+	struct osmo_mslookup_result test_result_v4 = {.rc = OSMO_MSLOOKUP_RC_OK, .age = 3,
+						      .host_v4 = test_host_v4};
+	struct osmo_mslookup_result test_result_v6 = {.rc = OSMO_MSLOOKUP_RC_OK, .age = 3,
+						      .host_v6 = test_host_v6};
+	struct osmo_mslookup_result test_result_v4_v6 = {.rc = OSMO_MSLOOKUP_RC_OK, .age = 3,
+							 .host_v4 = test_host_v4, .host_v6 = test_host_v6};
+	struct result_from_answer_test result_from_answer_data[] = {
+		{
+			.desc = "IPv4",
+			.records = {RECORD_TXT_AGE, RECORD_A, RECORD_TXT_PORT_444},
+			.res = test_result_v4
+		},
+		{
+			.desc = "IPv6",
+			.records = {RECORD_TXT_AGE, RECORD_AAAA, RECORD_TXT_PORT_666},
+			.res = test_result_v6
+		},
+		{
+			.desc = "IPv4 + IPv6",
+			.records = {RECORD_TXT_AGE, RECORD_A, RECORD_TXT_PORT_444, RECORD_AAAA, RECORD_TXT_PORT_666},
+			.res = test_result_v4_v6
+		},
+		{
+			.desc = "A twice",
+			.records = {RECORD_TXT_AGE, RECORD_A, RECORD_TXT_PORT_444, RECORD_A},
+			.error = true
+		},
+		{
+			.desc = "AAAA twice",
+			.records = {RECORD_TXT_AGE, RECORD_AAAA, RECORD_TXT_PORT_444, RECORD_AAAA},
+			.error = true
+		},
+		{
+			.desc = "invalid TXT: no key/value pair",
+			.records = {RECORD_TXT_AGE, RECORD_AAAA, RECORD_TXT_INVALID_NO_KEY_VALUE},
+			.error = true
+		},
+		{
+			.desc = "age twice",
+			.records = {RECORD_TXT_AGE, RECORD_TXT_AGE},
+			.error = true
+		},
+		{
+			.desc = "port as first record",
+			.records = {RECORD_TXT_PORT_444},
+			.error = true
+		},
+		{
+			.desc = "port without previous ip record",
+			.records = {RECORD_TXT_AGE, RECORD_TXT_PORT_444},
+			.error = true
+		},
+		{
+			.desc = "invalid TXT: invalid key",
+			.records = {RECORD_TXT_AGE, RECORD_AAAA, RECORD_TXT_INVALID_KEY},
+			.error = true
+		},
+		{
+			.desc = "unexpected record type",
+			.records = {RECORD_TXT_AGE, RECORD_INVALID},
+			.error = true
+		},
+		{
+			.desc = "missing record: age",
+			.records = {RECORD_A, RECORD_TXT_PORT_444},
+			.error = true
+		},
+		{
+			.desc = "missing record: port for ipv4",
+			.records = {RECORD_TXT_AGE, RECORD_A},
+			.error = true
+		},
+		{
+			.desc = "missing record: port for ipv4 #2",
+			.records = {RECORD_TXT_AGE, RECORD_AAAA, RECORD_TXT_PORT_666, RECORD_A},
+			.error = true
+		},
+	};
+	int i = 0;
+	int j = 0;
+
+	fprintf(stderr, "-- %s --\n", __func__);
+	for (i = 0; i < ARRAY_SIZE(result_from_answer_data); i++) {
+		struct result_from_answer_test *t = &result_from_answer_data[i];
+		struct osmo_mdns_msg_answer ans = {0};
+		struct osmo_mslookup_result res = {0};
+		void *ctx_test = talloc_named_const(ctx, 0, t->desc);
+		bool is_error;
+
+		fprintf(stderr, "---\n");
+		fprintf(stderr, "test: %s\n", t->desc);
+		fprintf(stderr, "error: %s\n", t->error ? "true" : "false");
+		fprintf(stderr, "records:\n");
+		/* Build records list */
+		INIT_LLIST_HEAD(&ans.records);
+		for (j = 0; j < ARRAY_SIZE(t->records); j++) {
+			struct osmo_mdns_record *rec = NULL;
+
+			switch (t->records[j]) {
+				case RECORD_NONE:
+					break;
+				case RECORD_A:
+					fprintf(stderr, "- A 42.42.42.42\n");
+					rec = talloc_zero(ctx_test, struct osmo_mdns_record);
+					rec->type = OSMO_MDNS_RFC_RECORD_TYPE_A;
+					rec->data = ip_v4_n;
+					rec->length = sizeof(ip_v4_n);
+					break;
+				case RECORD_AAAA:
+					fprintf(stderr, "- AAAA 1122:3344:5566:7788:99aa:bbcc:ddee:ff00\n");
+					rec = talloc_zero(ctx_test, struct osmo_mdns_record);
+					rec->type = OSMO_MDNS_RFC_RECORD_TYPE_AAAA;
+					rec->data = ip_v6_n;
+					rec->length = sizeof(ip_v6_n);
+					break;
+				case RECORD_TXT_AGE:
+					fprintf(stderr, "- TXT age=3\n");
+					rec = osmo_mdns_record_txt_encode(ctx_test, "age", "3");
+					break;
+				case RECORD_TXT_PORT_444:
+					fprintf(stderr, "- TXT port=444\n");
+					rec = osmo_mdns_record_txt_encode(ctx_test, "port", "444");
+					break;
+				case RECORD_TXT_PORT_666:
+					fprintf(stderr, "- TXT port=666\n");
+					rec = osmo_mdns_record_txt_encode(ctx_test, "port", "666");
+					break;
+				case RECORD_TXT_INVALID_KEY:
+					fprintf(stderr, "- TXT hello=world\n");
+					rec = osmo_mdns_record_txt_encode(ctx_test, "hello", "world");
+					break;
+				case RECORD_TXT_INVALID_NO_KEY_VALUE:
+					fprintf(stderr, "- TXT 12345\n");
+					rec = osmo_mdns_record_txt_encode(ctx_test, "12", "45");
+					rec->data[3] = '3';
+					break;
+				case RECORD_INVALID:
+					fprintf(stderr, "- (invalid)\n");
+					rec = talloc_zero(ctx, struct osmo_mdns_record);
+					rec->type = OSMO_MDNS_RFC_RECORD_TYPE_UNKNOWN;
+					break;
+			}
+
+			if (rec)
+				llist_add_tail(&rec->list, &ans.records);
+		}
+
+		/* Verify output */
+		is_error = (result_from_answer(&res, &ans) != 0);
+		OSMO_ASSERT(t->error == is_error);
+		if (!t->error) {
+			fprintf(stderr, "exp: %s\n", osmo_hexdump((unsigned char *)&t->res, sizeof(t->res)));
+			fprintf(stderr, "res: %s\n", osmo_hexdump((unsigned char *)&res, sizeof(t->res)));
+			OSMO_ASSERT(memcmp(&res, &t->res, sizeof(t->res)) == 0);
+		}
+
+		talloc_free(ctx_test);
+		fprintf(stderr, "=> OK\n");
 	}
 }
 
@@ -380,6 +574,8 @@ int main()
 	test_enc_dec_rfc_question(ctx);
 	test_enc_dec_rfc_question_null(ctx);
 	test_enc_dec_rfc_record(ctx);
+
+	test_result_from_answer(ctx);
 
 	return 0;
 }
