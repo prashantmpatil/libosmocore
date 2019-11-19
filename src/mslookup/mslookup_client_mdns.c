@@ -4,12 +4,13 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-#include <osmocom/mslookup/mslookup_client.h>
-#include <osmocom/mslookup/mslookup_client_mdns.h>
-#include <osmocom/core/select.h>
 #include <osmocom/core/logging.h>
+#include <osmocom/core/select.h>
+#include <osmocom/gsm/gsm_utils.h>
 #include <osmocom/mslookup/mdns.h>
 #include <osmocom/mslookup/mdns_sock.h>
+#include <osmocom/mslookup/mslookup_client.h>
+#include <osmocom/mslookup/mslookup_client_mdns.h>
 
 struct osmo_mdns_method_state {
 	/* Parameters passed by _add_method_dns() */
@@ -134,8 +135,18 @@ static void mdns_method_destruct(struct osmo_mslookup_client_method *method)
 	osmo_mdns_sock_cleanup(state->mc);
 }
 
+/*! Initialize the mDNS lookup method.
+ * \param[in] client  the client to attach the method to.
+ * \param[in] ip  IPv4 or IPv6 address string.
+ * \param[in] port  The port to bind to.
+ * \param[in] initial_packet_id  Used in the first mslookup query, then increased by one in each following query. All
+ *				 servers answer to each query with the same packet ID. Set to -1 to use a random
+ *				 initial ID (recommended unless you need deterministic output). This ID is for visually
+ *				 distinguishing the packets in packet sniffers, the mslookup client uses not just the
+ *				 ID, but all query parameters (service type, ID, ID type), to determine if a reply is
+ *				 relevant. */
 struct osmo_mslookup_client_method *osmo_mslookup_client_add_mdns(struct osmo_mslookup_client *client, const char *ip,
-								  uint16_t port, bool reuse_addr)
+								  uint16_t port, bool reuse_addr, int initial_packet_id)
 {
 	struct osmo_mdns_method_state *state;
 	struct osmo_mslookup_client_method *m;
@@ -151,6 +162,14 @@ struct osmo_mslookup_client_method *osmo_mslookup_client_add_mdns(struct osmo_ms
 		     ip, port);
 		goto error_cleanup;
 	}
+
+	if (initial_packet_id == -1) {
+		if (osmo_get_rand_id((uint8_t *)&state->next_packet_id, 2) < 0) {
+			LOGP(DLMSLOOKUP, LOGL_ERROR, "mslookup mDNS: failed to generate random initial packet ID\n");
+			goto error_cleanup;
+		}
+	} else
+		state->next_packet_id = initial_packet_id;
 
 	state->client = client;
 

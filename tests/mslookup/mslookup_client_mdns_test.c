@@ -84,7 +84,7 @@ static void client_init()
 	fprintf(stderr, "%s\n", __func__);
 	client = osmo_mslookup_client_new(ctx);
 	OSMO_ASSERT(client);
-	client_method = osmo_mslookup_client_add_mdns(client, TEST_IP, TEST_PORT, true);
+	client_method = osmo_mslookup_client_add_mdns(client, TEST_IP, TEST_PORT, true, 1337);
 	OSMO_ASSERT(client_method);
 }
 
