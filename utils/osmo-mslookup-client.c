@@ -627,7 +627,7 @@ int main(int argc, char **argv)
 	if (!globals.mslookup_client
 	    || !osmo_mslookup_client_add_mdns(globals.mslookup_client,
 					      cmdline_opts.mdns_addr.ip, cmdline_opts.mdns_addr.port,
-					      true, -1)) {
+					      -1)) {
 		print_error("Failed to start mDNS client\n");
 		goto program_exit;
 	}

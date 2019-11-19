@@ -146,7 +146,7 @@ static void mdns_method_destruct(struct osmo_mslookup_client_method *method)
  *				 ID, but all query parameters (service type, ID, ID type), to determine if a reply is
  *				 relevant. */
 struct osmo_mslookup_client_method *osmo_mslookup_client_add_mdns(struct osmo_mslookup_client *client, const char *ip,
-								  uint16_t port, bool reuse_addr, int initial_packet_id)
+								  uint16_t port, int initial_packet_id)
 {
 	struct osmo_mdns_method_state *state;
 	struct osmo_mslookup_client_method *m;
@@ -173,7 +173,7 @@ struct osmo_mslookup_client_method *osmo_mslookup_client_add_mdns(struct osmo_ms
 
 	state->client = client;
 
-	state->mc = osmo_mdns_sock_init(state, ip, port, reuse_addr, mdns_method_recv, state, 0);
+	state->mc = osmo_mdns_sock_init(state, ip, port, mdns_method_recv, state, 0);
 	if (!state->mc)
 		goto error_cleanup;
 

@@ -64,7 +64,7 @@ static int server_recv(struct osmo_fd *osmo_fd, unsigned int what)
 static void server_init()
 {
 	fprintf(stderr, "%s\n", __func__);
-	server_mc = osmo_mdns_sock_init(ctx, TEST_IP, TEST_PORT, true, server_recv, NULL, 0);
+	server_mc = osmo_mdns_sock_init(ctx, TEST_IP, TEST_PORT, server_recv, NULL, 0);
 	OSMO_ASSERT(server_mc);
 }
 
@@ -84,7 +84,7 @@ static void client_init()
 	fprintf(stderr, "%s\n", __func__);
 	client = osmo_mslookup_client_new(ctx);
 	OSMO_ASSERT(client);
-	client_method = osmo_mslookup_client_add_mdns(client, TEST_IP, TEST_PORT, true, 1337);
+	client_method = osmo_mslookup_client_add_mdns(client, TEST_IP, TEST_PORT, 1337);
 	OSMO_ASSERT(client_method);
 }
 

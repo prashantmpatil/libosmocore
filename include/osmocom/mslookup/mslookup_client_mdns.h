@@ -12,7 +12,6 @@ struct osmo_mslookup_client_method;
 #define OSMO_MSLOOKUP_MDNS_PORT 4266
 
 struct osmo_mslookup_client_method *osmo_mslookup_client_add_mdns(struct osmo_mslookup_client *client, const char *ip,
-								  uint16_t port, bool reuse_addr,
-								  int initial_packet_id);
+								  uint16_t port, int initial_packet_id);
 
 const struct osmo_sockaddr_str *osmo_mslookup_client_method_mdns_get_bind_addr(struct osmo_mslookup_client_method *dns_method);

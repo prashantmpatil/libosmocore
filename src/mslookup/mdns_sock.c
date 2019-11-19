@@ -16,9 +16,9 @@
 #include <osmocom/mslookup/mdns_sock.h>
 
 /* returns 0 on success, -1 on error */
-struct osmo_mdns_sock *osmo_mdns_sock_init(void *ctx, const char *ip, unsigned int port, bool reuse_addr,
-						   int (*cb)(struct osmo_fd *fd, unsigned int what),
-						   void *data, unsigned int priv_nr)
+struct osmo_mdns_sock *osmo_mdns_sock_init(void *ctx, const char *ip, unsigned int port,
+					   int (*cb)(struct osmo_fd *fd, unsigned int what),
+					   void *data, unsigned int priv_nr)
 {
 	struct osmo_mdns_sock *ret;
 	int sock, rc;
@@ -65,13 +65,14 @@ struct osmo_mdns_sock *osmo_mdns_sock_init(void *ctx, const char *ip, unsigned i
 		goto error;
 	}
 
-	/* Tests: client and server listen on same IP and port */
-	if (reuse_addr) {
-		rc = setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, (char *)&y, sizeof(y));
-		if (rc == -1) {
-			LOGP(DLMSLOOKUP, LOGL_ERROR, "osmo_mdns_sock_init: setsockopt: %s\n", strerror(errno));
-			goto error;
-		}
+	/* Always allow binding the same IP and port twice. This is needed in OsmoHLR (where the code becomes cleaner by
+	 * just using a different socket for server and client code) and in the mslookup_client_mdns_test. Also for
+	 * osmo-mslookup-client if it is running multiple times in parallel (i.e. two incoming calls almost at the same
+	 * time need to be resolved with the simple dialplan example that just starts new processes). */
+	rc = setsockopt(sock,SOL_SOCKET,SO_REUSEADDR, (char *)&y, sizeof(y));
+	if (rc == -1) {
+		LOGP(DLMSLOOKUP, LOGL_ERROR, "osmo_mdns_sock_init: setsockopt: %s\n", strerror(errno));
+		goto error;
 	}
 
 	/* Bind and register osmo_fd callback */
