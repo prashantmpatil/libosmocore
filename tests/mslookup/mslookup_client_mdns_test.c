@@ -71,7 +71,9 @@ static void server_init()
 static void server_stop()
 {
 	fprintf(stderr, "%s\n", __func__);
+	OSMO_ASSERT(server_mc);
 	osmo_mdns_sock_cleanup(server_mc);
+	server_mc = NULL;
 }
 
 struct osmo_mslookup_client* client;
@@ -89,8 +91,9 @@ static void client_init()
 static void client_recv(struct osmo_mslookup_client *client, uint32_t request_handle,
 			const struct osmo_mslookup_query *query, const struct osmo_mslookup_result *result)
 {
+	char buf[128];
 	fprintf(stderr, "%s\n", __func__);
-	fprintf(stderr, "client_recv(): %s\n", osmo_mslookup_result_name_c(ctx, query, result));
+	fprintf(stderr, "client_recv(): %s\n", osmo_mslookup_result_name_b(buf, sizeof(buf), query, result));
 
 	osmo_mslookup_client_request_cleanup(client, request_handle);
 }
@@ -115,6 +118,8 @@ static void client_query()
 static void client_stop()
 {
 	fprintf(stderr, "%s\n", __func__);
+	osmo_mslookup_client_free(client);
+	client = NULL;
 }
 const struct timeval fake_time_start_time = { 0, 0 };
 
@@ -171,6 +176,7 @@ static void test_server_client()
  */
 int main()
 {
+	talloc_enable_null_tracking();
 	ctx = talloc_named_const(NULL, 0, "main");
 	osmo_init_logging2(ctx, NULL);
 
@@ -184,6 +190,13 @@ int main()
 	fake_time_start();
 
 	test_server_client();
+
+	log_fini();
+
+	OSMO_ASSERT(talloc_total_blocks(ctx) == 1);
+	talloc_free(ctx);
+	OSMO_ASSERT(talloc_total_blocks(NULL) == 1);
+	talloc_disable_null_tracking();
 
 	return 0;
 }

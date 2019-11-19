@@ -15,7 +15,7 @@ static struct osmo_mdns_record *_osmo_mdns_record_txt_encode(void *ctx, const ch
 	return ret;
 }
 
-struct osmo_mdns_record *osmo_mdns_record_txt_encode(void *ctx, const char *key, const char *value_fmt, ...)
+struct osmo_mdns_record *osmo_mdns_record_txt_keyval_encode(void *ctx, const char *key, const char *value_fmt, ...)
 {
 	va_list ap;
 	char *value = NULL;
@@ -34,44 +34,38 @@ struct osmo_mdns_record *osmo_mdns_record_txt_encode(void *ctx, const char *key,
 	return r;
 }
 
-int osmo_mdns_record_txt_decode(void *ctx, const struct osmo_mdns_record *rec, char **key, char **value)
+int osmo_mdns_record_txt_keyval_decode(const struct osmo_mdns_record *rec,
+				       char *key_buf, size_t key_size, char *value_buf, size_t value_size)
 {
-	size_t key_length;
-	size_t value_length;
 	const char *key_value;
+	const char *key_value_end;
 	const char *sep;
+	const char *value;
 
 	if (rec->type != OSMO_MDNS_RFC_RECORD_TYPE_TXT)
 		return -EINVAL;
 
 	key_value = (const char *)rec->data;
+	key_value_end = key_value + rec->length;
 
 	/* Verify and then skip the redundant string length byte */
 	if (*key_value != rec->length - 1)
 		return -EINVAL;
 	key_value++;
 
+	if (key_value >= key_value_end)
+		return -EINVAL;
+
 	/* Find equals sign */
-	sep = strchr(key_value, '=');
+	sep = osmo_strnchr(key_value, key_value_end - key_value, '=');
 	if (!sep)
 		return -EINVAL;
 
 	/* Parse key */
-	key_length = sep - key_value;
-	*key = talloc_memdup(ctx, key_value, key_length + 1);
-	if (!*key)
-		return -ENOMEM;
-	(*key)[key_length] = '\0';
+	osmo_token_copy(key_buf, key_size, key_value, sep - key_value);
 
 	/* Parse value */
-	value_length = rec->length - key_length - 2;
-	*value = talloc_size(ctx, value_length + 1);
-	if (!*value) {
-		talloc_free(*key);
-		return -ENOMEM;
-	}
-	memcpy(*value, sep + 1, value_length);
-	(*value)[value_length] = '\0';
-
+	value = sep + 1;
+	osmo_token_copy(value_buf, value_size, value, key_value_end - value);
 	return 0;
 }

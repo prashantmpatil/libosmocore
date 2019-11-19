@@ -23,3 +23,4 @@ struct osmo_mdns_msg_request *osmo_mdns_msg_request_decode(void *ctx, const uint
 void osmo_mdns_msg_answer_init(struct osmo_mdns_msg_answer *answer);
 int osmo_mdns_msg_answer_encode(void *ctx, struct msgb *msg, const struct osmo_mdns_msg_answer *ans);
 struct osmo_mdns_msg_answer *osmo_mdns_msg_answer_decode(void *ctx, const uint8_t *data, size_t data_len);
+int osmo_mdns_result_from_answer(struct osmo_mslookup_result *result, const struct osmo_mdns_msg_answer *ans);

@@ -363,11 +363,6 @@ void test_enc_dec_rfc_record(void *ctx)
 	}
 }
 
-/*
- * Decoding test for result_from_answer()
- */
-int result_from_answer(struct osmo_mslookup_result *result, struct osmo_mdns_msg_answer *ans);
-
 static uint8_t ip_v4_n[] = {0x2a, 0x2a, 0x2a, 0x2a};
 static uint8_t ip_v6_n[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
 			    0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00};
@@ -513,23 +508,23 @@ static void test_result_from_answer(void *ctx)
 					break;
 				case RECORD_TXT_AGE:
 					fprintf(stderr, "- TXT age=3\n");
-					rec = osmo_mdns_record_txt_encode(ctx_test, "age", "3");
+					rec = osmo_mdns_record_txt_keyval_encode(ctx_test, "age", "3");
 					break;
 				case RECORD_TXT_PORT_444:
 					fprintf(stderr, "- TXT port=444\n");
-					rec = osmo_mdns_record_txt_encode(ctx_test, "port", "444");
+					rec = osmo_mdns_record_txt_keyval_encode(ctx_test, "port", "444");
 					break;
 				case RECORD_TXT_PORT_666:
 					fprintf(stderr, "- TXT port=666\n");
-					rec = osmo_mdns_record_txt_encode(ctx_test, "port", "666");
+					rec = osmo_mdns_record_txt_keyval_encode(ctx_test, "port", "666");
 					break;
 				case RECORD_TXT_INVALID_KEY:
 					fprintf(stderr, "- TXT hello=world\n");
-					rec = osmo_mdns_record_txt_encode(ctx_test, "hello", "world");
+					rec = osmo_mdns_record_txt_keyval_encode(ctx_test, "hello", "world");
 					break;
 				case RECORD_TXT_INVALID_NO_KEY_VALUE:
 					fprintf(stderr, "- TXT 12345\n");
-					rec = osmo_mdns_record_txt_encode(ctx_test, "12", "45");
+					rec = osmo_mdns_record_txt_keyval_encode(ctx_test, "12", "45");
 					rec->data[3] = '3';
 					break;
 				case RECORD_INVALID:
@@ -544,8 +539,11 @@ static void test_result_from_answer(void *ctx)
 		}
 
 		/* Verify output */
-		is_error = (result_from_answer(&res, &ans) != 0);
-		OSMO_ASSERT(t->error == is_error);
+		is_error = (osmo_mdns_result_from_answer(&res, &ans) != 0);
+		if (t->error != is_error) {
+			fprintf(stderr, "got %s\n", is_error ? "error" : "no error");
+			OSMO_ASSERT(false);
+		}
 		if (!t->error) {
 			fprintf(stderr, "exp: %s\n", osmo_hexdump((unsigned char *)&t->res, sizeof(t->res)));
 			fprintf(stderr, "res: %s\n", osmo_hexdump((unsigned char *)&res, sizeof(t->res)));

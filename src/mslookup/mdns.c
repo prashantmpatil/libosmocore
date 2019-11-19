@@ -67,7 +67,7 @@ error:
 	return NULL;
 }
 
-static int sock_addrstr_from_mdns_record(struct osmo_sockaddr_str *sockaddr_str, struct osmo_mdns_record *rec)
+static int sockaddr_str_from_mdns_record(struct osmo_sockaddr_str *sockaddr_str, struct osmo_mdns_record *rec)
 {
 	switch (rec->type) {
 		case OSMO_MDNS_RFC_RECORD_TYPE_A:
@@ -120,7 +120,7 @@ int osmo_mdns_result_encode(void *ctx, struct msgb *msg, uint16_t packet_id, con
 	INIT_LLIST_HEAD(&ans.records);
 
 	/* Record for age */
-	rec_age = osmo_mdns_record_txt_encode(ctx, "age", "%"PRIu32, result->age);
+	rec_age = osmo_mdns_record_txt_keyval_encode(ctx, "age", "%"PRIu32, result->age);
 	OSMO_ASSERT(rec_age);
 	llist_add_tail(&rec_age->list, &ans.records);
 
@@ -135,7 +135,7 @@ int osmo_mdns_result_encode(void *ctx, struct msgb *msg, uint16_t packet_id, con
 		rec_ip_v4.length = sizeof(rec_ip_v4_in);
 		llist_add_tail(&rec_ip_v4.list, &ans.records);
 
-		rec_ip_v4_port = osmo_mdns_record_txt_encode(ctx, "port", "%"PRIu16, result->host_v4.port);
+		rec_ip_v4_port = osmo_mdns_record_txt_keyval_encode(ctx, "port", "%"PRIu16, result->host_v4.port);
 		OSMO_ASSERT(rec_ip_v4_port);
 		llist_add_tail(&rec_ip_v4_port->list, &ans.records);
 	}
@@ -151,7 +151,7 @@ int osmo_mdns_result_encode(void *ctx, struct msgb *msg, uint16_t packet_id, con
 		rec_ip_v6.length = sizeof(rec_ip_v6_in);
 		llist_add_tail(&rec_ip_v6.list, &ans.records);
 
-		rec_ip_v6_port = osmo_mdns_record_txt_encode(ctx, "port", "%"PRIu16, result->host_v6.port);
+		rec_ip_v6_port = osmo_mdns_record_txt_keyval_encode(ctx, "port", "%"PRIu16, result->host_v6.port);
 		OSMO_ASSERT(rec_ip_v6_port);
 		llist_add_tail(&rec_ip_v6_port->list, &ans.records);
 	}
@@ -164,121 +164,154 @@ error:
 	return -EINVAL;
 }
 
+static int decode_uint32_t(const char *str, uint32_t *val)
+{
+	long long int lld;
+	char *endptr = NULL;
+	*val = 0;
+	errno = 0;
+	lld = strtoll(str, &endptr, 10);
+	if (errno || !endptr || *endptr)
+		return -EINVAL;
+	if (lld < 0 || lld > UINT32_MAX)
+		return -EINVAL;
+	*val = lld;
+	return 0;
+}
+
+static int decode_port(const char *str, uint16_t *port)
+{
+	uint32_t val;
+	if (decode_uint32_t(str, &val))
+		return -EINVAL;
+	if (val > 65535)
+		return -EINVAL;
+	*port = val;
+	return 0;
+}
+
 /*! Read expected mDNS records into mslookup result. The records must arrive in a specific format.
  *  Either "age", ip_v4/v6, "port" (only IPv4 or IPv6 present)
  *  or "age", ip_v4, "port", ip_v6, "port" (both IPv4 and v6 present).
  * "age" and "port" are TXT records, ip_v4 is an A record, ip_v6 is an AAAA record. */
-int result_from_answer(struct osmo_mslookup_result *result, struct osmo_mdns_msg_answer *ans)
+int osmo_mdns_result_from_answer(struct osmo_mslookup_result *result, const struct osmo_mdns_msg_answer *ans)
 {
-	struct osmo_mdns_record *rec, *rec_prev;
-	char *txt_key;
-	char *txt_value;
+	struct osmo_mdns_record *rec;
+	char txt_key[64];
+	char txt_value[64];
 	bool found_age = false;
 	bool found_ip_v4 = false;
 	bool found_ip_v6 = false;
-	int found_ports = 0;
-	void *ctx = talloc_named(NULL, 0, "result_from_answer");
+	struct osmo_sockaddr_str *expect_port_for = NULL;
+
+	result->rc = OSMO_MSLOOKUP_RC_DECODE_ERROR;
 
 	llist_for_each_entry(rec, &ans->records, list) {
 		switch (rec->type) {
 			case OSMO_MDNS_RFC_RECORD_TYPE_A:
+				if (expect_port_for) {
+					LOGP(DLMSLOOKUP, LOGL_ERROR,
+					     "'A' record found, but still expecting a 'port' value first\n");
+					return -EINVAL;
+				}
 				if (found_ip_v4) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "'A' record found twice in mDNS answer\n");
-					goto error;
+					return -EINVAL;
 				}
 				found_ip_v4 = true;
-				if (sock_addrstr_from_mdns_record(&result->host_v4, rec) != 0)
-					goto error;
+				expect_port_for = &result->host_v4;
+				if (sockaddr_str_from_mdns_record(expect_port_for, rec)) {
+					LOGP(DLMSLOOKUP, LOGL_ERROR, "'A' record with invalid address data\n");
+					return -EINVAL;
+				}
 				break;
 			case OSMO_MDNS_RFC_RECORD_TYPE_AAAA:
+				if (expect_port_for) {
+					LOGP(DLMSLOOKUP, LOGL_ERROR,
+					     "'AAAA' record found, but still expecting a 'port' value first\n");
+					return -EINVAL;
+				}
 				if (found_ip_v6) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "'AAAA' record found twice in mDNS answer\n");
-					goto error;
+					return -EINVAL;
 				}
 				found_ip_v6 = true;
-				if (sock_addrstr_from_mdns_record(&result->host_v6, rec) != 0)
-					goto error;
+				expect_port_for = &result->host_v6;
+				if (sockaddr_str_from_mdns_record(expect_port_for, rec) != 0) {
+					LOGP(DLMSLOOKUP, LOGL_ERROR, "'AAAA' record with invalid address data\n");
+					return -EINVAL;
+				}
 				break;
 			case OSMO_MDNS_RFC_RECORD_TYPE_TXT:
-				if (osmo_mdns_record_txt_decode(ctx, rec, &txt_key, &txt_value) != 0) {
+				if (osmo_mdns_record_txt_keyval_decode(rec, txt_key, sizeof(txt_key),
+								       txt_value, sizeof(txt_value)) != 0) {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "failed to decode txt record\n");
-					goto error;
+					return -EINVAL;
 				}
 				if (strcmp(txt_key, "age") == 0) {
 					if (found_age) {
-						LOGP(DLMSLOOKUP, LOGL_ERROR, "'TXT' record for 'age' found twice in"
-									     " mDNS answer\n");
-						goto error;
+						LOGP(DLMSLOOKUP, LOGL_ERROR, "duplicate 'TXT' record for 'age'\n");
+						return -EINVAL;
 					}
 					found_age = true;
-					result->age = atoi(txt_value);
+					if (decode_uint32_t(txt_value, &result->age)) {
+						LOGP(DLMSLOOKUP, LOGL_ERROR,
+						     "'TXT' record: invalid 'age' value ('age=%s')\n", txt_value);
+						return -EINVAL;
+					}
 				} else if (strcmp(txt_key, "port") == 0) {
-					if (rec->list.prev == &ans->records) {
-						LOGP(DLMSLOOKUP, LOGL_ERROR, "'TXT' record for 'port' without previous"
-									     " record\n");
-						goto error;
+					if (!expect_port_for) {
+						LOGP(DLMSLOOKUP, LOGL_ERROR,
+						     "'TXT' record for 'port' without previous 'A' or 'AAAA' record\n");
+						return -EINVAL;
 					}
-
-					rec_prev = (struct osmo_mdns_record *) rec->list.prev;
-					if (rec_prev->type != OSMO_MDNS_RFC_RECORD_TYPE_A &&
-					    rec_prev->type != OSMO_MDNS_RFC_RECORD_TYPE_AAAA) {
-						LOGP(DLMSLOOKUP, LOGL_ERROR, "'TXT' record for 'port' without previous"
-									     " 'A' or 'AAAA' record\n");
-						goto error;
+					if (decode_port(txt_value, &expect_port_for->port)) {
+						LOGP(DLMSLOOKUP, LOGL_ERROR,
+						     "'TXT' record: invalid 'port' value ('port=%s')\n", txt_value);
+						return -EINVAL;
 					}
-					if (rec_prev->type == OSMO_MDNS_RFC_RECORD_TYPE_A)
-						result->host_v4.port = atoi(txt_value);
-					else
-						result->host_v6.port = atoi(txt_value);
-					found_ports++;
+					expect_port_for = NULL;
 				} else {
 					LOGP(DLMSLOOKUP, LOGL_ERROR, "unexpected key '%s' in TXT record\n", txt_key);
-					goto error;
+					return -EINVAL;
 				}
 				break;
 			default:
 				LOGP(DLMSLOOKUP, LOGL_ERROR, "unexpected record type\n");
-				goto error;
+				return -EINVAL;
 		}
 	}
 
 	/* Check if everything was found */
-	if (!found_age || (!found_ip_v4 && !found_ip_v6) || found_ports != found_ip_v4 + found_ip_v6) {
+	if (!found_age || !(found_ip_v4 || found_ip_v6) || expect_port_for) {
 		LOGP(DLMSLOOKUP, LOGL_ERROR, "missing resource records in mDNS answer\n");
-		goto error;
+		return -EINVAL;
 	}
 
 	result->rc = OSMO_MSLOOKUP_RC_OK;
-	talloc_free(ctx);
 	return 0;
-error:
-	talloc_free(ctx);
-	return -EINVAL;
 }
 
 
 int osmo_mdns_result_decode(void *ctx, const uint8_t *data, size_t data_len, uint16_t *packet_id,
 			    struct osmo_mslookup_query *query, struct osmo_mslookup_result *result)
 {
-	struct osmo_mdns_msg_answer *ans = NULL;
-
-	ctx = talloc_named(ctx, 0, "osmo_mdns_result_decode");
-
+	int rc = -EINVAL;
+	struct osmo_mdns_msg_answer *ans;
 	ans = osmo_mdns_msg_answer_decode(ctx, data, data_len);
 	if (!ans)
-		goto error;
+		goto exit_free;
 
 	if (osmo_mslookup_query_from_domain_str(query, ans->domain) < 0)
-		goto error;
+		goto exit_free;
 
-	if (result_from_answer(result, ans) < 0)
-		goto error;
+	if (osmo_mdns_result_from_answer(result, ans) < 0)
+		goto exit_free;
 
 	*packet_id = ans->id;
-
-	talloc_free(ans);
-	return 0;
-error:
-	talloc_free(ctx);
-	return -EINVAL;
+	rc = 0;
+exit_free:
+	if (ans)
+		talloc_free(ans);
+	return rc;
 }

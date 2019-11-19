@@ -274,14 +274,14 @@ error: true
 records:
 - TXT age=3
 - TXT age=3
-DLMSLOOKUP ERROR 'TXT' record for 'age' found twice in mDNS answer
+DLMSLOOKUP ERROR duplicate 'TXT' record for 'age'
 => OK
 ---
 test: port as first record
 error: true
 records:
 - TXT port=444
-DLMSLOOKUP ERROR 'TXT' record for 'port' without previous record
+DLMSLOOKUP ERROR 'TXT' record for 'port' without previous 'A' or 'AAAA' record
 => OK
 ---
 test: port without previous ip record

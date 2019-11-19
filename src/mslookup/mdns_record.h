@@ -13,5 +13,6 @@ struct osmo_mdns_record {
 	uint8_t *data;
 };
 
-struct osmo_mdns_record *osmo_mdns_record_txt_encode(void *ctx, const char *key, const char *value_fmt, ...);
-int osmo_mdns_record_txt_decode(void *ctx, const struct osmo_mdns_record *rec, char **key, char **value);
+struct osmo_mdns_record *osmo_mdns_record_txt_keyval_encode(void *ctx, const char *key, const char *value_fmt, ...);
+int osmo_mdns_record_txt_keyval_decode(const struct osmo_mdns_record *rec,
+				       char *key_buf, size_t key_size, char *value_buf, size_t value_size);
