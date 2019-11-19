@@ -58,7 +58,7 @@ static int mdns_method_recv(struct osmo_fd *osmo_fd, unsigned int what)
 	int n;
 	uint8_t buffer[1024];
 	uint32_t request_handle = 0;
-	void *ctx = NULL; /* FIXME */
+	void *ctx = state;
 
 	n = read(osmo_fd->fd, buffer, sizeof(buffer));
 	if (n < 0) {
@@ -79,7 +79,7 @@ static int mdns_method_recv(struct osmo_fd *osmo_fd, unsigned int what)
 static void mdns_method_request(struct osmo_mslookup_client_method *method, const struct osmo_mslookup_query *query,
 				uint32_t request_handle)
 {
-	char buf[100];
+	char buf[128];
 	struct osmo_mdns_method_state *state = method->priv;
 	struct msgb *msg = msgb_alloc(1024, __func__);
 	struct osmo_mdns_method_request *r = talloc_zero(method->client, struct osmo_mdns_method_request);

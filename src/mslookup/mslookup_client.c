@@ -74,6 +74,7 @@ void osmo_mslookup_client_free(struct osmo_mslookup_client *client)
 	llist_for_each_entry_safe(m, n, &client->lookup_methods, entry) {
 		_osmo_mslookup_client_method_del(m);
 	}
+	talloc_free(client);
 }
 
 /*! Add an osmo_mslookup_client_method to service MS Lookup requests.

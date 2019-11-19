@@ -80,7 +80,7 @@ int osmo_mdns_msg_answer_encode(void *ctx, struct msgb *msg, const struct osmo_m
 
 struct osmo_mdns_msg_answer *osmo_mdns_msg_answer_decode(void *ctx, const uint8_t *data, size_t data_len)
 {
-	struct osmo_mdns_rfc_header hdr = {0};
+	struct osmo_mdns_rfc_header hdr = {};
 	size_t hdr_len = sizeof(struct osmo_mdns_rfc_header);
 	struct osmo_mdns_msg_answer *ret = talloc_zero(ctx, struct osmo_mdns_msg_answer);
 

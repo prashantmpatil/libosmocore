@@ -47,6 +47,7 @@ enum osmo_mslookup_result_code {
 	OSMO_MSLOOKUP_RC_TIMEOUT,
 	OSMO_MSLOOKUP_RC_CANCELED,
 	OSMO_MSLOOKUP_RC_NOT_FOUND,
+	OSMO_MSLOOKUP_RC_DECODE_ERROR,
 };
 
 /*! Information to request from a lookup. */
