@@ -6,6 +6,7 @@ LDADD = $(top_builddir)/src/libosmocore.la $(top_builddir)/src/gsm/libosmogsm.la
 EXTRA_DIST = conv_gen.py conv_codes_gsm.py
 
 bin_PROGRAMS = osmo-arfcn osmo-auc-gen osmo-config-merge
+bin_SCRIPTS = osmo-gsm-shark
 
 osmo_arfcn_SOURCES = osmo-arfcn.c
 
