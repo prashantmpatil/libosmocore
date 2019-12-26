@@ -63,6 +63,7 @@ endif
 if !EMBEDDED
 check_PROGRAMS += \
 	stats/stats_test \
+	stats/fake_stats \
 	exec/exec_test
 endif
 
@@ -75,6 +76,9 @@ utils_utils_test_LDADD = $(LDADD) $(top_builddir)/src/gsm/libosmogsm.la
 
 stats_stats_test_SOURCES = stats/stats_test.c
 stats_stats_test_LDADD = $(LDADD) $(top_builddir)/src/gsm/libosmogsm.la
+
+stats_fake_stats_SOURCES = stats/fake_stats.c
+stats_fake_stats_LDADD = $(LDADD) $(top_builddir)/src/vty/libosmovty.la
 
 a5_a5_test_SOURCES = a5/a5_test.c
 a5_a5_test_LDADD = $(LDADD) $(top_builddir)/src/gsm/libgsmint.la
