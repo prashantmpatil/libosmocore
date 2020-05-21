@@ -43,8 +43,11 @@ int osmo_ctx_init(const char *id)
 	return 0;
 }
 
-/* initialize osmo_ctx on main tread */
-static __attribute__((constructor)) void on_dso_load_ctx(void)
+/* initialize osmo_ctx on main thread. Use a very large priority value
+ * for the constructor attribute in order to ensure this is called after the
+ * talloc-internal constructor, which is setting up the randomized magic value
+ * in talloc_lib_init(). */
+static __attribute__((constructor(65535))) void on_dso_load_ctx(void)
 {
 	OSMO_ASSERT(osmo_ctx_init("main") == 0);
 }
