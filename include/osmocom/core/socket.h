@@ -22,6 +22,14 @@ struct sockaddr_in;
 struct sockaddr;
 struct osmo_fd;
 
+struct osmo_sockaddr {
+	union {
+		struct sockaddr sa;
+		struct sockaddr_in sin;
+		struct sockaddr_in6 sin6;
+	} u;
+};
+
 /* flags for osmo_sock_init. */
 /*! connect the socket to a remote peer */
 #define OSMO_SOCK_F_CONNECT	(1 << 0)
