@@ -128,6 +128,7 @@ nobase_include_HEADERS = \
 		       osmocom/gsm/protocol/gsm_23_003.h \
 		       osmocom/gsm/protocol/gsm_23_041.h \
 		       osmocom/gsm/protocol/gsm_29_118.h \
+		       osmocom/gsm/protocol/gsm_29_018.h \
                        osmocom/gsm/protocol/gsm_44_318.h \
                        osmocom/gsm/protocol/gsm_48_049.h \
                        osmocom/gsm/protocol/ipaccess.h \
