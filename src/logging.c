@@ -903,6 +903,7 @@ struct log_target *log_target_create_stderr(void)
 struct log_target *log_target_create_file(const char *fname)
 {
 	struct log_target *target;
+	int rc;
 
 	target = log_target_create();
 	if (!target)
@@ -912,6 +913,12 @@ struct log_target *log_target_create_file(const char *fname)
 	target->tgt_file.out = fopen(fname, "a");
 	if (!target->tgt_file.out)
 		return NULL;
+
+	rc = setvbuf(target->tgt_file.out, NULL, _IOFBF, 128*1024);
+	if (rc != 0) {
+		LOGP(DLGLOBAL, LOGL_NOTICE, "Could not increase output buffer size for '%s': %s\n",
+		     fname, strerror(errno));
+	}
 
 	target->output = _file_output;
 
@@ -980,11 +987,19 @@ void log_target_destroy(struct log_target *target)
  *  \returns 0 in case of success; negative otherwise */
 int log_target_file_reopen(struct log_target *target)
 {
+	int rc;
+
 	fclose(target->tgt_file.out);
 
 	target->tgt_file.out = fopen(target->tgt_file.fname, "a");
 	if (!target->tgt_file.out)
 		return -errno;
+
+	rc = setvbuf(target->tgt_file.out, NULL, _IOFBF, 128*1024);
+	if (rc != 0) {
+		LOGP(DLGLOBAL, LOGL_NOTICE, "Could not increase output buffer size for '%s': %s\n",
+		     target->tgt_file.fname, strerror(errno));
+	}
 
 	/* we assume target->output already to be set */
 
