@@ -245,6 +245,7 @@ enum log_target_type {
 	LOG_TGT_TYPE_STDERR,	/*!< stderr logging */
 	LOG_TGT_TYPE_STRRB,	/*!< osmo_strrb-backed logging */
 	LOG_TGT_TYPE_GSMTAP,	/*!< GSMTAP network logging */
+	LOG_TGT_TYPE_SYSTEMD,	/*!< systemd journal logging */
 };
 
 /*! Whether/how to log the source filename (and line number). */
@@ -315,6 +316,10 @@ struct log_target {
 			const char *ident;
 			const char *hostname;
 		} tgt_gsmtap;
+
+		struct {
+			bool raw;
+		} sd_journal;
 	};
 
 	/*! call-back function to be called when the logging framework
@@ -399,6 +404,8 @@ struct log_target *log_target_create_gsmtap(const char *host, uint16_t port,
 					    const char *ident,
 					    bool ofd_wq_mode,
 					    bool add_sink);
+struct log_target *log_target_create_systemd(bool raw);
+void log_target_systemd_set_raw(struct log_target *target, bool raw);
 int log_target_file_reopen(struct log_target *tgt);
 int log_target_file_switch_to_wqueue(struct log_target *tgt);
 int log_targets_reopen(void);
