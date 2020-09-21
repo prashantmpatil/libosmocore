@@ -190,24 +190,28 @@ fsm = FSM(head='#include <osmocom/bsc/lcs.h>',
 with open('lcs_loc_req.c', 'w') as f:
 	f.write(fsm.to_c())
 
-fsm = FSM(head='#include <osmocom/bsc/lcs.h>',
-	  prefix = 'lcs_ta_req',
-	  priv = 'lcs_ta_req',
+fsm = FSM(head='#include <osmocom/smlc/smlc_subscr_conn.h>',
+	  prefix = 'smlc_subscr_conn',
+	  priv = 'smlc_subscr_conn',
 	  states = (
 		    State('init',
-			  ('start',),
-			  ('wait_ta', 'got_ta'),
+			  (),
+			  ('conn_req',),
 			  onenter=False,
 			 ),
-		    State('wait_ta',
-			  ('ta',),
-			  ('got_ta', ),
+		    State('conn_req',
+			  (),
+			  ('connected', ),
 			 ),
-		    State('got_ta',
+		    State('connected',
+			  ('unused'),
+			  ('releasing'),
+			 ),
+		    State('releasing',
 			  (),
 			  (),
 			 ),
 		   )
 	 )
-with open('lcs_ta_req.c', 'w') as f:
+with open('smlc_subscr_conn.c', 'w') as f:
 	f.write(fsm.to_c())
