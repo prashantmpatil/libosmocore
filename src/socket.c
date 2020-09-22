@@ -710,6 +710,18 @@ int osmo_sock_init2_multiaddr(uint16_t family, uint16_t type, uint8_t proto,
 	loc_has_v4addr = rem_has_v4addr = (family == AF_INET);
 	loc_has_v6addr = rem_has_v6addr = (family == AF_INET6);
 
+	LOGP(DLGLOBAL, LOGL_DEBUG, "%s(): family %s\n",
+	     __func__, family == AF_INET ? "AF_INET" : (family == AF_INET6 ? "AF_INET6" : "?"));
+
+	for (i = 0; i < local_hosts_cnt; i++) {
+		LOGP(DLGLOBAL, LOGL_DEBUG, "%s(): local host %d: %s:%d\n",
+		     __func__, i, local_hosts[i], local_port);
+	}
+	for (i = 0; i < remote_hosts_cnt; i++) {
+		LOGP(DLGLOBAL, LOGL_DEBUG, "%s(): remote host %d: %s:%d\n",
+		     __func__, i, remote_hosts[i], remote_port);
+	}
+
 	/* TODO: So far this function is only aimed for SCTP, but could be
 	   reused in the future for other protocols with multi-addr support */
 	if (proto != IPPROTO_SCTP)
@@ -755,7 +767,11 @@ int osmo_sock_init2_multiaddr(uint16_t family, uint16_t type, uint8_t proto,
 	if (((flags & OSMO_SOCK_F_BIND) && (flags & OSMO_SOCK_F_CONNECT)) &&
 	    !addrinfo_has_in6addr_any((const struct addrinfo **)res_loc, local_hosts_cnt) &&
 	    (loc_has_v4addr != rem_has_v4addr || loc_has_v6addr != rem_has_v6addr)) {
-		LOGP(DLGLOBAL, LOGL_ERROR, "Invalid v4 vs v6 in local vs remote addresses\n");
+		LOGP(DLGLOBAL, LOGL_ERROR, "Invalid v4 vs v6 in local vs remote addresses: "
+		     "local:%s%s remote:%s%s\n",
+		     loc_has_v4addr ? " v4" : "", loc_has_v6addr ? " v6" : "",
+		     rem_has_v4addr ? " v4" : "", rem_has_v6addr ? " v6" : ""
+		     );
 		rc = -EINVAL;
 		goto ret_freeaddrinfo;
 	}
