@@ -28,6 +28,7 @@ libosmocore_la_SOURCES = context.c timer.c timer_gettimeofday.c timer_clockgetti
 			 sockaddr_str.c \
 			 use_count.c \
 			 exec.c \
+			 probes.d \
 			 $(NULL)
 
 if HAVE_SSSE3
@@ -74,6 +75,17 @@ endif
 if ENABLE_SYSTEMD_LOGGING
 libosmocore_la_SOURCES += logging_systemd.c
 libosmocore_la_LIBADD += $(SYSTEMD_LIBS)
+endif
+
+if ENABLE_SYSTEMTAP
+probes.h: probes.d
+	$(DTRACE) -C -h -s $< -o $@
+
+probes.lo: probes.d
+	$(LIBTOOL) --mode=compile $(AM_V_lt) --tag=CC env CFLAGS="$(CFLAGS)" $(DTRACE) -C -G -s $< -o $@
+
+BUILT_SOURCES += probes.h probes.lo
+libosmocore_la_LIBADD += probes.lo
 endif
 
 crc%gen.c: crcXXgen.c.tpl
