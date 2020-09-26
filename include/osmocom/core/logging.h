@@ -289,8 +289,11 @@ struct log_target {
 
 	union {
 		struct {
+			/* direct, blocking output via stdio */
 			FILE *out;
 			const char *fname;
+			/* indirect output via write_queue and osmo_select_main() */
+			struct osmo_wqueue *wqueue;
 		} tgt_file;
 
 		struct {
@@ -393,6 +396,7 @@ struct log_target *log_target_create_gsmtap(const char *host, uint16_t port,
 					    bool ofd_wq_mode,
 					    bool add_sink);
 int log_target_file_reopen(struct log_target *tgt);
+int log_target_file_switch_to_wqueue(struct log_target *tgt);
 int log_targets_reopen(void);
 
 void log_add_target(struct log_target *target);

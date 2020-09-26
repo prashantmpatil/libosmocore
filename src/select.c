@@ -38,6 +38,7 @@
 #include <osmocom/core/logging.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/utils.h>
+#include <osmocom/core/application.h>
 
 #include "../config.h"
 
@@ -277,6 +278,9 @@ int osmo_select_main(int polling)
 		osmo_panic("You cannot use the 'select' volatile "
 			   "context if you don't use osmo_select_main_ctx()!\n");
 	}
+	/* We now know this application is using osmo_select_main() and hence can switch the stderr
+	 * log target from buffered, stream based I/O to non-blocking write-queue */
+	log_target_file_switch_to_wqueue(osmo_stderr_target);
 #endif
 	return rc;
 }
