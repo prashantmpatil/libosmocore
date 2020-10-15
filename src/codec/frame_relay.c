@@ -161,7 +161,7 @@ static struct msgb *q933_msgb_alloc(uint16_t dlci, uint8_t prot_disc, uint8_t ms
 }
 
 /* obtain the [next] transmit sequence number */
-static uint8_t fr_link_get_tx_seq(struct osmo_fr_link *link)
+static uint8_t link_get_tx_seq(struct osmo_fr_link *link)
 {
 	/* The {user equipment, network} increments the send sequence
 	 * counter using modulo 256. The value zero is skipped. */
@@ -176,7 +176,7 @@ static uint8_t fr_link_get_tx_seq(struct osmo_fr_link *link)
 static void msgb_put_link_int_verif(struct msgb *msg, struct osmo_fr_link *link)
 {
 	uint8_t link_int_tx[2];
-	link_int_tx[0] = fr_link_get_tx_seq(link);
+	link_int_tx[0] = link_get_tx_seq(link);
 	link_int_tx[1] = link->last_rx_seq;
 	msgb_tlv_put(msg, Q933_IEI_LINK_INT_VERIF, 2, link_int_tx);
 }
@@ -333,7 +333,7 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	return tx_lmi_q933_status(link, rep_type);
 }
 
-static int fr_rx_lmi_q922(struct msgb *msg)
+static int rx_lmi_q922(struct msgb *msg)
 {
 	struct q933_a_hdr *qh;
 	struct tlv_parsed tp;
@@ -377,7 +377,7 @@ static int fr_rx_lmi_q922(struct msgb *msg)
 	return rc;
 }
 
-int fr_rx(struct osmo_fr_link *link, struct msgb *msg)
+int osmo_fr_rx(struct osmo_fr_link *link, struct msgb *msg)
 {
 	uint8_t *frh;
 	uint16_t dlci;
@@ -407,7 +407,7 @@ int fr_rx(struct osmo_fr_link *link, struct msgb *msg)
 
 	switch (dlci) {
 	case LMI_Q933A_DLCI:
-		return fr_rx_lmi_q922(msg);
+		return rx_lmi_q922(msg);
 	case LMI_CISCO_DLCI:
 		LOGP(DFR, LOGL_NOTICE, "Unsupported FR DLCI %u\n", dlci);
 		msgb_free(msg);
@@ -503,4 +503,9 @@ struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 	tx_lmi_q933_status(link, Q933_IEI_PVC_STATUS);
 
 	return dlc;
+}
+
+void osmo_fr_set_tx_cb(osmo_fr_send tx_send, void *ctx)
+{
+
 }

@@ -75,4 +75,5 @@ struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci);
 
 int osmo_fr_rx(struct osmo_fr_link *link, struct msgb *msg);
 
-extern int osmo_fr_tx(struct msgb *msg);
+typedef int (*osmo_fr_send)(void *ctx, struct msgb *msg);
+void osmo_fr_set_tx_cb(osmo_fr_send tx_send, void *data);
