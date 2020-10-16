@@ -43,7 +43,11 @@ struct osmo_fr_link {
 	/* list of data link connections at this link */
 	struct llist_head dlc_list;
 
-	int (*unknown_dlc_rx_cb)(struct osmo_fr_dlc *dlc, struct msgb *msg);
+	int (*unknown_dlc_rx_cb)(void *cb_data, struct msgb *msg);
+	void *unknown_dlc_rx_cb_data;
+
+	int (*tx_cb)(struct msgb *msg, void *data);
+	void *tx_cb_data;
 };
 
 /* Frame Relay Data Link Connection */
@@ -61,7 +65,8 @@ struct osmo_fr_dlc {
 	/* is this DLC about to be destroyed */
 	bool del;
 
-	int (*rx_cb)(struct osmo_fr_dlc *dlc, struct msgb *msg);
+	int (*rx_cb)(void *cb_data, struct osmo_fr_dlc *dlc, struct msgb *msg);
+	void *rx_cb_data;
 };
 
 /* allocate a frame relay network */
@@ -73,7 +78,8 @@ struct osmo_fr_link *fr_link_alloc(struct osmo_fr_network *net);
 /* allocate a data link connectoin on a given framerelay link */
 struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci);
 
-int osmo_fr_rx(struct osmo_fr_link *link, struct msgb *msg);
+int osmo_fr_rx(struct msgb *msg);
+int osmo_fr_tx_dlc(struct msgb *msg);
 
 typedef int (*osmo_fr_send)(void *ctx, struct msgb *msg);
 void osmo_fr_set_tx_cb(osmo_fr_send tx_send, void *data);
