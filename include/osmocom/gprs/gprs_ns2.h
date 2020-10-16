@@ -10,6 +10,7 @@
 
 struct osmo_sockaddr;
 struct osmo_sockaddr_str;
+struct osmo_fr_network;
 
 struct gprs_ns2_inst;
 struct gprs_ns2_nse;
@@ -125,6 +126,19 @@ int gprs_ns2_ip_bind(struct gprs_ns2_inst *nsi,
 struct gprs_ns2_vc_bind *gprs_ns2_ip_bind_by_sockaddr(struct gprs_ns2_inst *nsi,
 						      const struct osmo_sockaddr *sockaddr);
 void gprs_ns2_bind_set_mode(struct gprs_ns2_vc_bind *bind, enum gprs_ns2_vc_mode mode);
+
+/* FR VL driver */
+struct gprs_ns2_vc_bind *gprs_ns2_fr_bind_by_netif(
+		struct gprs_ns2_inst *nsi,
+		const char *netif);
+const char *gprs_ns2_fr_bind_netif(struct gprs_ns2_vc_bind *bind);
+int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
+		     const char *netif,
+		     struct osmo_fr_network *fr_network,
+		     struct gprs_ns2_vc_bind **result);
+int gprs_ns2_is_fr_bind(struct gprs_ns2_vc_bind *bind);
+struct gprs_ns2_vc *gprs_ns2_fr_nsvc_by_dlci(struct gprs_ns2_vc_bind *bind, uint16_t dlci);
+
 
 /* create a VC connection */
 struct gprs_ns2_vc *gprs_ns2_ip_connect(struct gprs_ns2_vc_bind *bind,

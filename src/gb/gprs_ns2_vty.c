@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #include <arpa/inet.h>
+#include <net/if.h>
 
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/byteswap.h>
@@ -41,6 +42,7 @@
 #include <osmocom/core/sockaddr_str.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/socket.h>
+#include <osmocom/codec/frame_relay.h>
 #include <osmocom/gprs/gprs_ns2.h>
 #include <osmocom/gsm/tlv.h>
 #include <osmocom/vty/vty.h>
@@ -77,12 +79,15 @@ struct ns2_vty_vc {
 	uint16_t nsvci;
 	uint16_t frdlci;
 
+	char netif[IF_NAMESIZE + 1];
+
 	bool remote_end_is_sgsn;
 	bool configured;
 };
 
 static struct gprs_ns2_inst *vty_nsi = NULL;
 static struct ns2_vty_priv priv;
+static struct osmo_fr_network *vty_fr_network = NULL;
 
 /* FIXME: this should go to some common file as it is copied
  * in vty_interface.c of the BSC */
@@ -222,6 +227,11 @@ static int config_write_ns(struct vty *vty)
 				vtyvc->nsei, vtyvc->frdlci,
 				VTY_NEWLINE);
 			break;
+		case GPRS_NS_LL_FR:
+			vty_out(vty, " nse %u fr %s dlci %u%s",
+				vtyvc->nsei, vtyvc->netif, vtyvc->frdlci,
+				VTY_NEWLINE);
+			break;
 		default:
 			break;
 		}
@@ -267,6 +277,8 @@ static void dump_nsvc(struct vty *vty, struct gprs_ns2_vc *nsvc, bool stats)
 		vty_out(vty, "%s:%u <> %s:%u", local.ip, local.port, remote.ip, remote.port);
 		break;
 	}
+	case GPRS_NS_LL_FR:
+		/* TODO: implement dump_nse for FR */
 	case GPRS_NS_LL_FR_GRE:
 		/* TODO: implement dump_nse for FR GRE */
 	case GPRS_NS_LL_E1:
@@ -277,7 +289,20 @@ static void dump_nsvc(struct vty *vty, struct gprs_ns2_vc *nsvc, bool stats)
 	vty_out(vty, "Remote: %s ",
 		 gprs_ns2_ll_str(nsvc));
 
-	vty_out(vty, "%s%s", nsvc->ll == GPRS_NS_LL_UDP ? "UDP" : "FR-GRE", VTY_NEWLINE);
+	switch (GPRS_NS_LL_UDP) {
+	case GPRS_NS_LL_UDP:
+		vty_out(vty, "%s%s", "UDP", VTY_NEWLINE);
+		break;
+	case GPRS_NS_LL_FR_GRE:
+		vty_out(vty, "%s%s", "FR_GRE", VTY_NEWLINE);
+		break;
+	case GPRS_NS_LL_FR:
+		vty_out(vty, "%s%s", "FR", VTY_NEWLINE);
+		break;
+	case GPRS_NS_LL_E1:
+		vty_out(vty, "%s%s", "E1", VTY_NEWLINE);
+		break;
+	}
 
 	if (stats) {
 		vty_out_rate_ctr_group(vty, " ", nsvc->ctrg);
@@ -387,6 +412,34 @@ DEFUN(show_nse, show_nse_cmd, "show ns (nsei|nsvc) <0-65535> [stats]",
 }
 
 #define NSE_CMD_STR "Persistent NS Entity\n" "NS Entity ID (NSEI)\n"
+
+DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
+	"nse <0-65535> fr NETIF dlci <0-1023>",
+	NSE_CMD_STR
+	"frame relay\n"
+	IFNAME_STR
+	"Data Link connection identifier\n"
+	"Data Link connection identifier\n"
+	)
+{
+	struct ns2_vty_vc *vtyvc;
+
+	uint16_t nsei = atoi(argv[0]);
+	const char *name = argv[1];
+	uint16_t dlci = atoi(argv[2]);
+
+	vtyvc = vtyvc_by_nsei(nsei, true);
+	if (!vtyvc) {
+		vty_out(vty, "Can not allocate space %s", VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	strncpy(vtyvc->netif, name, sizeof(vtyvc->netif));
+	vtyvc->frdlci = dlci;
+	vtyvc->ll = GPRS_NS_LL_FR;
+
+	return CMD_SUCCESS;
+}
 
 DEFUN(cfg_nse_nsvc, cfg_nse_nsvci_cmd,
 	"nse <0-65535> nsvci <0-65535>",
@@ -735,6 +788,7 @@ int gprs_ns2_vty_init(struct gprs_ns2_inst *nsi,
 
 	install_lib_element(CONFIG_NODE, &cfg_ns_cmd);
 	install_node(&ns_node, config_write_ns);
+	install_lib_element(L_NS_NODE, &cfg_nse_fr_cmd);
 	install_lib_element(L_NS_NODE, &cfg_nse_nsvci_cmd);
 	install_lib_element(L_NS_NODE, &cfg_nse_remoteip_cmd);
 	install_lib_element(L_NS_NODE, &cfg_nse_remoteport_cmd);
@@ -762,10 +816,11 @@ int gprs_ns2_vty_init(struct gprs_ns2_inst *nsi,
  */
 int gprs_ns2_vty_create() {
 	struct ns2_vty_vc *vtyvc;
-	struct gprs_ns2_vc_bind *bind;
+	struct gprs_ns2_vc_bind *bind, *fr;
 	struct gprs_ns2_nse *nse;
 	struct gprs_ns2_vc *nsvc;
 	struct osmo_sockaddr sockaddr;
+	int rc = 0;
 
 	if (!vty_nsi)
 		return -1;
@@ -811,13 +866,35 @@ int gprs_ns2_vty_create() {
 		}
 		nse->persistent = true;
 
-		nsvc = gprs_ns2_ip_connect(bind,
-					   &sockaddr,
-					   nse,
-					   vtyvc->nsvci);
-		if (!nsvc) {
-			/* Could not create NSVC, connect failed */
-			continue;
+		switch (vtyvc->ll) {
+		case GPRS_NS_LL_UDP:
+			nsvc = gprs_ns2_ip_connect(bind,
+						   &sockaddr,
+						   nse,
+						   vtyvc->nsvci);
+			if (!nsvc) {
+				/* Could not create NSVC, connect failed */
+				continue;
+			}
+			break;
+		case GPRS_NS_LL_FR:
+			if (vty_fr_network == NULL) {
+				vty_fr_network = osmo_fr_network_alloc(vty_nsi);
+			}
+			fr = gprs_ns2_fr_bind_by_netif(
+						vty_nsi,
+						vtyvc->netif);
+			if (!fr) {
+				rc = gprs_ns2_fr_bind(vty_nsi, vtyvc->netif, vty_fr_network, &fr);
+				if (rc < 0) {
+					LOGP(DLNS, LOGL_ERROR, "Can not create fr bind on device %s", vtyvc->netif);
+					return rc;
+				}
+			}
+			break;
+		case GPRS_NS_LL_FR_GRE:
+		case GPRS_NS_LL_E1:
+			break;
 		}
 		nsvc->persistent = true;
 	}
