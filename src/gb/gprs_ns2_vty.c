@@ -414,8 +414,10 @@ DEFUN(show_nse, show_nse_cmd, "show ns (nsei|nsvc) <0-65535> [stats]",
 #define NSE_CMD_STR "Persistent NS Entity\n" "NS Entity ID (NSEI)\n"
 
 DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
-	"nse <0-65535> fr NETIF dlci <0-1023>",
+	"nse <0-65535> nsvci <0-65535> fr NETIF dlci <0-1023>",
 	NSE_CMD_STR
+	"NS Virtual Connection\n"
+	"NS Virtual Connection ID (NSVCI)\n"
 	"frame relay\n"
 	IFNAME_STR
 	"Data Link connection identifier\n"
@@ -513,7 +515,8 @@ DEFUN(cfg_nse_fr_dlci, cfg_nse_fr_dlci_cmd,
 	"Frame Relay DLCI Number\n")
 {
 	uint16_t nsei = atoi(argv[0]);
-	uint16_t dlci = atoi(argv[1]);
+	uint16_t nsvci = atoi(argv[1]);
+	uint16_t dlci = atoi(argv[2]);
 	struct ns2_vty_vc *vtyvc;
 
 	vtyvc = vtyvc_by_nsei(nsei, true);
@@ -528,6 +531,7 @@ DEFUN(cfg_nse_fr_dlci, cfg_nse_fr_dlci_cmd,
 	}
 
 	vtyvc->frdlci = dlci;
+	vtyvc->nsvci = nsvci;
 
 	return CMD_SUCCESS;
 }
@@ -890,6 +894,12 @@ int gprs_ns2_vty_create() {
 					LOGP(DLNS, LOGL_ERROR, "Can not create fr bind on device %s", vtyvc->netif);
 					return rc;
 				}
+			}
+
+			nsvc = gprs_ns2_fr_connect(fr, vtyvc->nsei, vtyvc->nsvci, vtyvc->frdlci);
+			if (!nsvc) {
+				/* Could not create NSVC, connect failed */
+				continue;
 			}
 			break;
 		case GPRS_NS_LL_FR_GRE:
