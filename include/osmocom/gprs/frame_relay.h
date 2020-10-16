@@ -10,12 +10,19 @@
 struct osmo_tdef;
 struct msgb;
 
+enum osmo_fr_role {
+	FR_ROLE_USER_EQUIPMENT,
+	FR_ROLE_NETWORK_EQUIPMENT,
+};
+
 struct osmo_fr_network {
 	struct llist_head links;
 
 	unsigned int n391; 		/* full status polling counter */
 	unsigned int n392;		/* error threshold */
 	unsigned int n393;		/* monitored events count */
+
+	enum osmo_fr_role role;
 	struct osmo_tdef *T_defs;	/* T391, T392 */
 };
 
@@ -70,7 +77,7 @@ struct osmo_fr_dlc {
 };
 
 /* allocate a frame relay network */
-struct osmo_fr_network *osmo_fr_network_alloc(void *ctx);
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role);
 
 /* allocate a frame relay link in a given network */
 struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net);
