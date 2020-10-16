@@ -845,18 +845,28 @@ int gprs_ns2_vty_create() {
 
 	/* create vcs */
 	llist_for_each_entry(vtyvc, &priv.vtyvc, list) {
-		if (strlen(vtyvc->remote.ip) == 0) {
-			/* Invalid IP for VC */
-			continue;
-		}
+		/* validate settings */
+		switch (vtyvc->ll) {
+		case GPRS_NS_LL_UDP:
+			if (strlen(vtyvc->remote.ip) == 0) {
+				/* Invalid IP for VC */
+				continue;
+			}
 
-		if (!vtyvc->remote.port) {
-			/* Invalid port for VC */
-			continue;
-		}
+			if (!vtyvc->remote.port) {
+				/* Invalid port for VC */
+				continue;
+			}
 
-		if (osmo_sockaddr_str_to_sockaddr(&vtyvc->remote, &sockaddr.u.sas)) {
-			/* Invalid sockaddr for VC */
+			if (osmo_sockaddr_str_to_sockaddr(&vtyvc->remote, &sockaddr.u.sas)) {
+				/* Invalid sockaddr for VC */
+				continue;
+			}
+			break;
+		case GPRS_NS_LL_FR:
+			break;
+		case GPRS_NS_LL_FR_GRE:
+		case GPRS_NS_LL_E1:
 			continue;
 		}
 
