@@ -46,7 +46,7 @@ struct osmo_fr_link {
 	int (*unknown_dlc_rx_cb)(void *cb_data, struct msgb *msg);
 	void *unknown_dlc_rx_cb_data;
 
-	int (*tx_cb)(struct msgb *msg, void *data);
+	int (*tx_cb)(void *data, struct msgb *msg);
 	void *tx_cb_data;
 };
 
@@ -65,21 +65,21 @@ struct osmo_fr_dlc {
 	/* is this DLC about to be destroyed */
 	bool del;
 
-	int (*rx_cb)(void *cb_data, struct osmo_fr_dlc *dlc, struct msgb *msg);
+	int (*rx_cb)(void *cb_data, struct msgb *msg);
 	void *rx_cb_data;
 };
 
 /* allocate a frame relay network */
-struct osmo_fr_network *fr_network_alloc(void *ctx);
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx);
 
 /* allocate a frame relay link in a given network */
-struct osmo_fr_link *fr_link_alloc(struct osmo_fr_network *net);
+struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net);
+
+/* free a frame link in a given network */
+void osmo_fr_link_free(struct osmo_fr_link *link);
 
 /* allocate a data link connectoin on a given framerelay link */
-struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci);
+struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci);
 
 int osmo_fr_rx(struct msgb *msg);
 int osmo_fr_tx_dlc(struct msgb *msg);
-
-typedef int (*osmo_fr_send)(void *ctx, struct msgb *msg);
-void osmo_fr_set_tx_cb(osmo_fr_send tx_send, void *data);

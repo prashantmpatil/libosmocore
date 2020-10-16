@@ -417,7 +417,8 @@ int osmo_fr_rx(struct msgb *msg)
 	llist_for_each_entry(dlc, &link->dlc_list, list) {
 		if (dlc->dlci == dlci) {
 			/* dispatch to handler of respective DLC */
-			return dlc->rx_cb(dlc->rx_cb_data, dlc, msg);
+			msg->dst = dlc;
+			return dlc->rx_cb(dlc->rx_cb_data, msg);
 		}
 	}
 
@@ -470,7 +471,7 @@ static void fr_t392_cb(void *data)
 }
 
 /* allocate a frame relay network */
-struct osmo_fr_network *fr_network_alloc(void *ctx)
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx)
 {
 	struct osmo_fr_network *net = talloc_zero(ctx, struct osmo_fr_network);
 
@@ -484,7 +485,7 @@ struct osmo_fr_network *fr_network_alloc(void *ctx)
 }
 
 /* allocate a frame relay link in a given network */
-struct osmo_fr_link *fr_link_alloc(struct osmo_fr_network *net)
+struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
 {
 	struct osmo_fr_link *link = talloc_zero(net, struct osmo_fr_link);
 	if (!link)
@@ -502,8 +503,20 @@ struct osmo_fr_link *fr_link_alloc(struct osmo_fr_network *net)
 	return link;
 }
 
+void osmo_fr_link_free(struct osmo_fr_link *link)
+{
+	if (!link)
+		return;
+
+	osmo_timer_del(&link->t391);
+	osmo_timer_del(&link->t392);
+
+	llist_del(&link->list);
+	talloc_free(link);
+}
+
 /* allocate a data link connectoin on a given framerelay link */
-struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
+struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 {
 	struct osmo_fr_dlc *dlc = talloc_zero(link, struct osmo_fr_dlc);
 	if (!dlc)
