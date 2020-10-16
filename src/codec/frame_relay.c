@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <osmocom/codec/frame_relay.h>
 #include <osmocom/core/utils.h>
@@ -228,7 +229,7 @@ static int tx_lmi_q933_status_enq(struct osmo_fr_link *link, uint8_t rep_type)
 	msgb_tlv_put(resp, Q933_IEI_REPORT_TYPE, 1, &rep_type);
 	msgb_put_link_int_verif(resp, link);
 
-	return osmo_fr_tx(resp);
+	return link->tx_cb(resp, link->tx_cb_data);
 }
 
 /* Send a Q.933 STATUS of given type over given link */
@@ -259,7 +260,7 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 		break;
 	}
 
-	return osmo_fr_tx(resp);
+	return link->tx_cb(resp, link->tx_cb_data);
 }
 
 
@@ -377,13 +378,12 @@ static int rx_lmi_q922(struct msgb *msg)
 	return rc;
 }
 
-int osmo_fr_rx(struct osmo_fr_link *link, struct msgb *msg)
+int osmo_fr_rx(struct msgb *msg)
 {
 	uint8_t *frh;
 	uint16_t dlci;
 	struct osmo_fr_dlc *dlc;
-
-	msg->dst = link;
+	struct osmo_fr_link *link = msg->dst;
 
 	if (msgb_length(msg) < 2) {
 		LOGP(DFR, LOGL_ERROR, "Short FR header: %u bytes\n", msgb_length(msg));
@@ -417,16 +417,32 @@ int osmo_fr_rx(struct osmo_fr_link *link, struct msgb *msg)
 	llist_for_each_entry(dlc, &link->dlc_list, list) {
 		if (dlc->dlci == dlci) {
 			/* dispatch to handler of respective DLC */
-			return dlc->rx_cb(dlc, msg);
+			return dlc->rx_cb(dlc->rx_cb_data, dlc, msg);
 		}
 	}
 
 	if (link->unknown_dlc_rx_cb)
-		return link->unknown_dlc_rx_cb(NULL, msg);
+		return link->unknown_dlc_rx_cb(link->unknown_dlc_rx_cb_data, msg);
 	else
 		LOGP(DFR, LOGL_NOTICE, "DLCI %u doesn't exist, discarding\n", dlci);
 
 	return 0;
+}
+
+int osmo_fr_tx_dlc(struct msgb *msg)
+{
+	uint8_t *frh;
+	struct osmo_fr_dlc *dlc = msg->dst;
+	struct osmo_fr_link *link = dlc->link;
+
+	if (msgb_headroom(msg) < 2)
+		return -ENOSPC;
+
+	frh = msgb_push(msg, 2);
+	dlci_to_q922(frh, dlc->dlci);
+
+	msg->dst = link;
+	return link->tx_cb(link->tx_cb_data, msg);
 }
 
 /* Every T391 seconds, the user equipment sends a STATUS ENQUIRY
@@ -503,9 +519,4 @@ struct osmo_fr_dlc *fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 	tx_lmi_q933_status(link, Q933_IEI_PVC_STATUS);
 
 	return dlc;
-}
-
-void osmo_fr_set_tx_cb(osmo_fr_send tx_send, void *ctx)
-{
-
 }
