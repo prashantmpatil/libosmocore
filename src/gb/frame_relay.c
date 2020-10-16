@@ -105,13 +105,15 @@ struct osmo_tdef fr_tdefs[] = {
 		.default_val = 10,
 		.min_val = 5,
 		.max_val = 30,
-		.desc = "Link integrity verification polling timer"
+		.desc = "Link integrity verification polling timer",
+			.unit =  OSMO_TDEF_S,
 	}, {
 		.T=392,
 		.default_val = 15,
 		.min_val = 5,
 		.max_val = 30,
-		.desc = "Polling verification timer"
+		.desc = "Polling verification timer",
+				.unit =  OSMO_TDEF_S,
 	},
 	{}
 };
@@ -229,7 +231,7 @@ static int tx_lmi_q933_status_enq(struct osmo_fr_link *link, uint8_t rep_type)
 	msgb_tlv_put(resp, Q933_IEI_REPORT_TYPE, 1, &rep_type);
 	msgb_put_link_int_verif(resp, link);
 
-	return link->tx_cb(resp, link->tx_cb_data);
+	return link->tx_cb(link->tx_cb_data, resp);
 }
 
 /* Send a Q.933 STATUS of given type over given link */
@@ -260,7 +262,7 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 		break;
 	}
 
-	return link->tx_cb(resp, link->tx_cb_data);
+	return link->tx_cb(link->tx_cb_data, resp);
 }
 
 
@@ -331,7 +333,7 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	 * STATUS message and resets the T392 timer */
 	osmo_timer_schedule(&link->t392, osmo_tdef_get(link->net->T_defs, 392, OSMO_TDEF_S, 15), 0);
 
-	return tx_lmi_q933_status(link, rep_type);
+	return 0;
 }
 
 static int rx_lmi_q922(struct msgb *msg)
@@ -436,8 +438,17 @@ int osmo_fr_tx_dlc(struct msgb *msg)
 	struct osmo_fr_dlc *dlc = msg->dst;
 	struct osmo_fr_link *link = dlc->link;
 
-	if (msgb_headroom(msg) < 2)
+	if (!dlc->active) {
+		LOGP(DFR, LOGL_NOTICE, "DLCI %u is not active (yet), discarding\n", dlc->dlci);
+		msgb_free(msg);
+		return -1;
+	}
+	LOGP(DFR, LOGL_NOTICE, "DLCI %u is active, sending message\n", dlc->dlci);
+
+	if (msgb_headroom(msg) < 2) {
+		msgb_free(msg);
 		return -ENOSPC;
+	}
 
 	frh = msgb_push(msg, 2);
 	dlci_to_q922(frh, dlc->dlci);
@@ -471,15 +482,18 @@ static void fr_t392_cb(void *data)
 }
 
 /* allocate a frame relay network */
-struct osmo_fr_network *osmo_fr_network_alloc(void *ctx)
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role)
 {
 	struct osmo_fr_network *net = talloc_zero(ctx, struct osmo_fr_network);
 
 	INIT_LLIST_HEAD(&net->links);
 	net->T_defs = fr_tdefs;
+	osmo_tdefs_reset(net->T_defs);
 	net->n391 = 6;
 	net->n392 = 3;
 	net->n393 = 4;
+
+	net->role = role;
 
 	return net;
 }
@@ -488,17 +502,27 @@ struct osmo_fr_network *osmo_fr_network_alloc(void *ctx)
 struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
 {
 	struct osmo_fr_link *link = talloc_zero(net, struct osmo_fr_link);
+	int timer = 0;
 	if (!link)
 		return NULL;
 
 	link->net = net;
 	INIT_LLIST_HEAD(&link->dlc_list);
+	llist_add_tail(&link->list, &net->links);
+
 	osmo_timer_setup(&link->t391, fr_t391_cb, link);
 	osmo_timer_setup(&link->t392, fr_t392_cb, link);
 
-	/* TODO: schedule any timers */
-
-	llist_add_tail(&link->list, &net->links);
+	switch (net->role) {
+	case FR_ROLE_USER_EQUIPMENT:
+		timer = osmo_tdef_get(link->net->T_defs, 391, OSMO_TDEF_S, 10);
+		LOGP(DLNS, LOGL_ERROR, "Scheduling for %d seconds\n", timer);
+		osmo_timer_schedule(&link->t391, timer, 0);
+		osmo_timer_schedule(&link->t392, osmo_tdef_get(link->net->T_defs, 392, OSMO_TDEF_S, 15), 0);
+		break;
+	case FR_ROLE_NETWORK_EQUIPMENT:
+		break;
+	}
 
 	return link;
 }
@@ -524,7 +548,7 @@ struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 
 	dlc->link = link;
 	dlc->dlci = dlci;
-	dlc->active = true; // FIXME: HACK
+	dlc->active = false;
 
 	llist_add_tail(&dlc->list, &link->dlc_list);
 
