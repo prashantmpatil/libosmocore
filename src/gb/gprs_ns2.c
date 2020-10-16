@@ -258,6 +258,9 @@ char *gprs_ns2_ll_str_buf(char *buf, size_t buf_len, struct gprs_ns2_vc *nsvc)
 	case GPRS_NS_LL_E1:
 		snprintf(buf, buf_len, "e1)");
 		break;
+	case GPRS_NS_LL_FR:
+		snprintf(buf, buf_len, "fr)netif: %s dlci: %s", "hdlcX", "unsupported");
+		break;
 	default:
 		buf[0] = '\0';
 		break;
