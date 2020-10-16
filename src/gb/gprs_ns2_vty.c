@@ -42,7 +42,7 @@
 #include <osmocom/core/sockaddr_str.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/socket.h>
-#include <osmocom/codec/frame_relay.h>
+#include <osmocom/gprs/frame_relay.h>
 #include <osmocom/gprs/gprs_ns2.h>
 #include <osmocom/gsm/tlv.h>
 #include <osmocom/vty/vty.h>

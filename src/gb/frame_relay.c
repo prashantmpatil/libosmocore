@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <osmocom/codec/frame_relay.h>
+#include <osmocom/gprs/frame_relay.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/linuxlist.h>
