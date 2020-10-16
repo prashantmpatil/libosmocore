@@ -380,8 +380,9 @@ DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
 	struct ns2_vty_vc *vtyvc;
 
 	uint16_t nsei = atoi(argv[0]);
-	const char *name = argv[1];
-	uint16_t dlci = atoi(argv[2]);
+	uint16_t nsvci = atoi(argv[1]);
+	const char *name = argv[2];
+	uint16_t dlci = atoi(argv[3]);
 
 	vtyvc = vtyvc_by_nsei(nsei, true);
 	if (!vtyvc) {
@@ -391,6 +392,7 @@ DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
 
 	strncpy(vtyvc->netif, name, sizeof(vtyvc->netif));
 	vtyvc->frdlci = dlci;
+	vtyvc->nsvci = nsvci;
 	vtyvc->ll = GPRS_NS_LL_FR;
 
 	return CMD_SUCCESS;
@@ -846,7 +848,7 @@ int gprs_ns2_vty_create() {
 			break;
 		case GPRS_NS_LL_FR:
 			if (vty_fr_network == NULL) {
-				vty_fr_network = osmo_fr_network_alloc(vty_nsi);
+				vty_fr_network = osmo_fr_network_alloc(vty_nsi, FR_ROLE_USER_EQUIPMENT);
 			}
 			fr = gprs_ns2_fr_bind_by_netif(
 						vty_nsi,
@@ -854,7 +856,7 @@ int gprs_ns2_vty_create() {
 			if (!fr) {
 				rc = gprs_ns2_fr_bind(vty_nsi, vtyvc->netif, vty_fr_network, &fr);
 				if (rc < 0) {
-					LOGP(DLNS, LOGL_ERROR, "Can not create fr bind on device %s", vtyvc->netif);
+					LOGP(DLNS, LOGL_ERROR, "Can not create fr bind on device %s err: %d\n", vtyvc->netif, rc);
 					return rc;
 				}
 			}
