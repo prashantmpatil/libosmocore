@@ -609,6 +609,7 @@ static int rx_lmi_q922(struct msgb *msg)
 
 int osmo_fr_rx(struct msgb *msg)
 {
+	int rc = 0;
 	uint8_t *frh;
 	uint16_t dlci;
 	struct osmo_fr_dlc *dlc;
@@ -616,20 +617,20 @@ int osmo_fr_rx(struct msgb *msg)
 
 	if (msgb_length(msg) < 2) {
 		LOGP(DFR, LOGL_ERROR, "Short FR header: %u bytes\n", msgb_length(msg));
-		msgb_free(msg);
-		return -1;
+		rc = -1;
+		goto out;
 	}
 
 	frh = msg->l1h = msgb_data(msg);
 	if (frh[0] & 0x01) {
 		LOGP(DFR, LOGL_NOTICE, "Unsupported single-byte FR address\n");
-		msgb_free(msg);
-		return 1;
+		rc = -1;
+		goto out;
 	}
 	if ((frh[1] & 0x0f) != 0x01) {
 		LOGP(DFR, LOGL_NOTICE, "Unknown second FR octet 0x%02x\n", frh[1]);
-		msgb_free(msg);
-		return -1;
+		rc = -1;
+		goto out;
 	}
 	dlci = q922_to_dlci(frh);
 	msg->l2h = frh + 2;
@@ -639,8 +640,7 @@ int osmo_fr_rx(struct msgb *msg)
 		return rx_lmi_q922(msg);
 	case LMI_CISCO_DLCI:
 		LOGP(DFR, LOGL_NOTICE, "Unsupported FR DLCI %u\n", dlci);
-		msgb_free(msg);
-		return 0;
+		goto out;
 	}
 
 	if (!link->state) {
@@ -661,9 +661,10 @@ int osmo_fr_rx(struct msgb *msg)
 	else
 		LOGP(DFR, LOGL_NOTICE, "DLCI %u doesn't exist, discarding\n", dlci);
 
+out:
 	msgb_free(msg);
 
-	return 0;
+	return rc;
 }
 
 int osmo_fr_tx_dlc(struct msgb *msg)
