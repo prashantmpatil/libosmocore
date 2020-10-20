@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include <osmocom/gprs/frame_relay.h>
+#include <osmocom/core/endian.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/linuxlist.h>
@@ -71,6 +72,10 @@ enum q933_iei {
 #define LMI_Q933A_DLCI		0	/* Q.933A DLCI */
 #define LMI_CISCO_DLCI		1023	/* Cisco DLCI */
 
+/* maximum of supported */
+#define MAX_SUPPORTED_PVC	10
+
+/* TODO: add counters since good connection */
 
 /* Message header of the L3 payload of a Q.933 Annex A message */
 struct q933_a_hdr {
@@ -81,18 +86,19 @@ struct q933_a_hdr {
 
 /* Value part of the Q.933 Annex A.3.3 IE */
 struct q933_a_pvc_sts {
-	uint8_t ext0:1,
+	uint8_t dlci_msb:6,
 		spare:1,
-		dlci_msb:6;
-	uint8_t ext1:1,
+		ext0:1;
+	uint8_t space1:3,
 		dlci_lsb:4,
-		spare1:3;
-	uint8_t ext2:1,
-		spare2:3,
-		new:1,
-		delete:1,
+		ext1:1;
+	uint8_t reserved:1,
 		active:1,
-		reserved:1;
+		delete:1,
+		new:1,
+		spare2:3,
+		ext2:1;
+
 } __attribute__((packed));
 
 /* RX Message: 14 [ 00 01 03 08 00 75  95 01 01 00 03 02 01 00 ] */
@@ -102,7 +108,9 @@ struct q933_a_pvc_sts {
 struct osmo_tdef fr_tdefs[] = {
 	{
 		.T=391,
-		.default_val = 10,
+//		.default_val = 10,
+	.default_val = 5,
+
 		.min_val = 5,
 		.max_val = 30,
 		.desc = "Link integrity verification polling timer",
@@ -199,13 +207,13 @@ static void msgb_put_pvc_status(struct msgb *msg, struct osmo_fr_dlc *dlc)
 	ie[1] = 0x80 | ((dlc->dlci & 0xf) << 3);
 	ie[2] = 0x80;
 
+	/* FIXME: validate: this status should be added as long it's not yet acked by the remote */
 	if (dlc->active)
 		ie[2] |= 0x02;
 
-	if (dlc->new) {
+	if (dlc->add) {
 		ie[2] |= 0x08;
 		/* we've reported it as new once, reset the status */
-		dlc->new = false;
 	}
 
 	if (dlc->del) {
@@ -226,6 +234,7 @@ static int tx_lmi_q933_status_enq(struct osmo_fr_link *link, uint8_t rep_type)
 	if (!resp)
 		return -1;
 	resp->dst = link;
+	link->expected_rep = rep_type;
 
 	/* Table A.2/Q.933 */
 	msgb_tlv_put(resp, Q933_IEI_REPORT_TYPE, 1, &rep_type);
@@ -237,7 +246,7 @@ static int tx_lmi_q933_status_enq(struct osmo_fr_link *link, uint8_t rep_type)
 /* Send a Q.933 STATUS of given type over given link */
 static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 {
-	struct osmo_fr_dlc *dlc, *dlc2;
+	struct osmo_fr_dlc *dlc;
 	struct msgb *resp;
 
 	resp = q933_msgb_alloc(0, Q931_PDISC_CC, Q931_MSGT_STATUS);
@@ -250,14 +259,14 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 	switch (rep_type) {
 	case Q933_REPT_FULL_STATUS:
 		msgb_put_link_int_verif(resp, link);
-		llist_for_each_entry_safe(dlc, dlc2, &link->dlc_list, list)
+		llist_for_each_entry(dlc, &link->dlc_list, list)
 			msgb_put_pvc_status(resp, dlc);
 		break;
 	case Q933_REPT_LINK_INTEGRITY_VERIF:
 		msgb_put_link_int_verif(resp, link);
 		break;
 	case Q933_REPT_SINGLE_PVC_ASYNC_STS:
-		llist_for_each_entry_safe(dlc, dlc2, &link->dlc_list, list)
+		llist_for_each_entry(dlc, &link->dlc_list, list)
 			msgb_put_pvc_status(resp, dlc);
 		break;
 	}
@@ -272,6 +281,11 @@ static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 	struct osmo_fr_link *link = msg->dst;
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
+
+	if (link->net->role == FR_ROLE_USER_EQUIPMENT) {
+		LOGP(DFR, LOGL_DEBUG, "Status enq aren't support for role user ");
+		return -1;
+	}
 
 	/* check for mandatory IEs */
 	if (!TLVP_PRES_LEN(tp, Q933_IEI_REPORT_TYPE, 1) ||
@@ -295,22 +309,212 @@ static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 	return tx_lmi_q933_status(link, rep_type);
 }
 
+/* check if the link become active or not.
+ * param[in] valid contains the status of the last packet */
+static void check_link_state(struct osmo_fr_link *link, bool valid)
+{
+	unsigned int last, i;
+	unsigned int carry = 0;
+
+	link->succeed = link->succeed << 1;
+	if (valid)
+		link->succeed |= 1;
+
+	/* count the bits */
+	last = link->succeed & ((1 << link->net->n393) - 1);
+	for (i = 0; i < link->net->n393; i++)
+		if (last & 1 << i)
+			carry++;
+
+	if (link->net->n393 - carry >= link->net->n392) {
+		/* link is now failing */
+	} else {
+		/* link is now good */
+	}
+}
+
+static int validate_pvc_status(struct tlv_parsed *tp, size_t tp_len)
+{
+	size_t i;
+	uint16_t len = 0;
+
+	for (i = 0; i < tp_len; i++) {
+		if (!TLVP_PRESENT(&tp[i], Q933_IEI_PVC_STATUS))
+			continue;
+
+		/* PVC status can be 2 or 3 bytes. If the PVC is bigger
+		 * ignore this to be compatible to future extensions. */
+		len = TLVP_LEN(&tp[i], Q933_IEI_PVC_STATUS);
+		if (len <= 1) {
+			return -EINVAL;
+		}
+		/* FIXME: validate correct flags: are some flags invalid at the same time? */
+	}
+
+	return 0;
+}
+
+static int parse_full_pvc_status(struct osmo_fr_link *link, struct tlv_parsed *tp, size_t tp_len)
+{
+	size_t i;
+	int err = 0;
+	struct osmo_fr_dlc *dlc, *tmp;
+	struct q933_a_pvc_sts *pvc;
+	uint16_t dlci = 0;
+	uint16_t *dlcis = talloc_zero_array(link, uint16_t, tp_len);
+	if (!dlcis)
+		return -ENOMEM;
+
+	/* first run validate all PVCs */
+	err = validate_pvc_status(tp, tp_len);
+	if (err < 0)
+		goto out;
+
+	for (i = 0; i < tp_len; i++) {
+		if (!TLVP_PRESENT(&tp[i], Q933_IEI_PVC_STATUS))
+			continue;
+
+		/* parse only 3 byte PVCs */
+		pvc = (struct q933_a_pvc_sts *) TLVP_VAL_MINLEN(
+					&tp[i],
+					Q933_IEI_PVC_STATUS,
+					sizeof(struct q933_a_pvc_sts));
+		if (!pvc)
+			continue;
+
+		dlci = ((pvc->dlci_msb & 0x3f) << 4) | (pvc->dlci_lsb & 0xf);
+		dlcis[i] = dlci;
+		dlc = osmo_fr_dlc_by_dlci(link, dlci);
+		if (!dlc) {
+			dlc = osmo_fr_dlc_alloc(link, dlci);
+			if (!dlc) {
+				LOGP(DFR, LOGL_ERROR, "Could not create DLC %d", dlci);
+			}
+		}
+
+		/* Figure A.3/Q.933: The delete bit is only applicable for timely notification
+		 *                   using the optional single PVC asynchronous status report.
+		 * Ignoring the delete. */
+		dlc->add = pvc->new;
+		dlc->active = pvc->active;
+		dlc->del = 0;
+	}
+
+	/* check if all dlc are present in PVC Status */
+	llist_for_each_entry_safe(dlc, tmp, &link->dlc_list, list) {
+		bool found = false;
+		for (i = 0; i < tp_len; i++) {
+			if (dlcis[i] == dlc->dlci) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			dlc->active = false;
+			dlc->del = true;
+		}
+	}
+
+	return 0;
+out:
+	talloc_free(dlcis);
+	return err;
+}
+
+static int parse_link_pvc_status(struct osmo_fr_link *link, struct tlv_parsed *tp, size_t tp_len)
+{
+	int err;
+	size_t i;
+	struct q933_a_pvc_sts *pvc;
+	struct osmo_fr_dlc *dlc;
+	uint16_t dlci = 0;
+
+	err = validate_pvc_status(tp, tp_len);
+	if (err < 0)
+		return err;
+
+	for (i = 0; i < tp_len; i++) {
+		if (!TLVP_PRESENT(&tp[i], Q933_IEI_PVC_STATUS))
+			continue;
+
+		/* parse only 3 byte PVCs */
+		pvc = (struct q933_a_pvc_sts *) TLVP_VAL_MINLEN(
+					&tp[i],
+					Q933_IEI_PVC_STATUS,
+					sizeof(struct q933_a_pvc_sts));
+		if (!pvc)
+			continue;
+
+		dlci = ((pvc->dlci_msb & 0x3f) << 4) | (pvc->dlci_lsb & 0xf);
+		dlc = osmo_fr_dlc_by_dlci(link, dlci);
+		if (!dlc) {
+			/* don't create dlc's for the ones which are about to be deleted. */
+			if (dlc->del)
+				continue;
+
+			dlc = osmo_fr_dlc_alloc(link, dlci);
+			if (!dlc) {
+				LOGP(DFR, LOGL_ERROR, "Could not create DLC %d", dlci);
+			}
+		}
+
+		if (pvc->delete) {
+			dlc->del = 1;
+		} else {
+			dlc->add = pvc->new;
+			dlc->active = pvc->active;
+			dlc->del = 0;
+		}
+	}
+
+	return 0;
+}
+
+static size_t count_pvc_status(struct tlv_parsed *tp, size_t tp_len)
+{
+	size_t i, count = 0;
+	for (i = 0; i < tp_len; i++) {
+		if (!TLVP_PRESENT(&tp[i], Q933_IEI_PVC_STATUS))
+			continue;
+		count++;
+	}
+
+	return count;
+}
+
 static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 {
 	struct osmo_fr_link *link = msg->dst;
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
 
-	/* check for mandatory IEs */
-	if (!TLVP_PRES_LEN(tp, Q933_IEI_REPORT_TYPE, 1))
+	if (link->net->role == FR_ROLE_NETWORK_EQUIPMENT) {
+		LOGP(DFR, LOGL_DEBUG, "Status aren't support for role network\n");
 		return -1;
+	}
+
+	/* check for mandatory IEs */
+	if (!TLVP_PRES_LEN(tp, Q933_IEI_REPORT_TYPE, 1)) {
+		LOGP(DFR, LOGL_DEBUG, "Missing TLV Q933 Report Type\n");
+		return -1;
+	}
+
 	rep_type = *TLVP_VAL(tp, Q933_IEI_REPORT_TYPE);
 
 	switch (rep_type) {
 	case Q933_REPT_FULL_STATUS:
 	case Q933_REPT_LINK_INTEGRITY_VERIF:
-		if (!TLVP_PRES_LEN(tp, Q933_IEI_LINK_INT_VERIF, 2))
+		if (rep_type != link->expected_rep) {
+			LOGP(DFR, LOGL_DEBUG, "Unexpected Q933 report type (got 0x%x != exp 0x%x)\n",
+			     rep_type, link->expected_rep);
 			return -1;
+		}
+
+		if (!TLVP_PRES_LEN(tp, Q933_IEI_LINK_INT_VERIF, 2)) {
+			LOGP(DFR, LOGL_DEBUG, "Missing TLV Q933 Link Integrety Verification\n");
+			return -1;
+		}
 		link_int_rx = TLVP_VAL(tp, Q933_IEI_LINK_INT_VERIF);
 		link->last_rx_seq = link_int_rx[0];
 		/* The received receive sequence number is not valid if
@@ -322,12 +526,26 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 			return 0;
 		break;
 	case Q933_REPT_SINGLE_PVC_ASYNC_STS:
-		break;
 	default:
 		return -1;
 	}
 
-	/* FIXME: process any PVC Status IEs */
+	check_link_state(link, true);
+	if (count_pvc_status(tp, MAX_SUPPORTED_PVC + 1) > MAX_SUPPORTED_PVC) {
+		LOGP(DFR, LOGL_ERROR, "Too many PVC! Only %d are supported!\n",
+		     MAX_SUPPORTED_PVC);
+	}
+
+	switch (rep_type) {
+	case Q933_REPT_FULL_STATUS:
+		parse_full_pvc_status(link, tp, MAX_SUPPORTED_PVC);
+		break;
+	case Q933_REPT_LINK_INTEGRITY_VERIF:
+		parse_link_pvc_status(link, tp, MAX_SUPPORTED_PVC);
+		break;
+	default:
+		break;
+	}
 
 	/* The network responds to each STATUS ENQUIRY message with a
 	 * STATUS message and resets the T392 timer */
@@ -339,7 +557,8 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 static int rx_lmi_q922(struct msgb *msg)
 {
 	struct q933_a_hdr *qh;
-	struct tlv_parsed tp;
+	/* the + 1 is used to detect more than MAX_SUPPORTED_PVC */
+	struct tlv_parsed tp[MAX_SUPPORTED_PVC + 1];
 	uint8_t *lapf;
 	int rc;
 
@@ -361,14 +580,14 @@ static int rx_lmi_q922(struct msgb *msg)
 		return -1;
 	}
 
-	tlv_parse(&tp, &q933_att_tlvdef, msgb_l3(msg) + sizeof(*qh), msgb_l3len(msg) - sizeof(*qh), 0, 0);
+	tlv_parse2(tp, MAX_SUPPORTED_PVC + 1, &q933_att_tlvdef, msgb_l3(msg) + sizeof(*qh), msgb_l3len(msg) - sizeof(*qh), 0, 0);
 
 	switch (qh->msg_type) {
 	case Q931_MSGT_STATUS_ENQUIRY:
-		rc = rx_lmi_q933_status_enq(msg, &tp);
+		rc = rx_lmi_q933_status_enq(msg, tp);
 		break;
 	case Q931_MSGT_STATUS:
-		rc = rx_lmi_q933_status(msg, &tp);
+		rc = rx_lmi_q933_status(msg, tp);
 		break;
 	default:
 		LOGP(DFR, LOGL_NOTICE, "Rx unsupported LMI message type %u\n", qh->msg_type);
@@ -429,6 +648,8 @@ int osmo_fr_rx(struct msgb *msg)
 	else
 		LOGP(DFR, LOGL_NOTICE, "DLCI %u doesn't exist, discarding\n", dlci);
 
+	msgb_free(msg);
+
 	return 0;
 }
 
@@ -478,6 +699,7 @@ static void fr_t392_cb(void *data)
 	 * a STATUS ENQUIRY within T392, which results in restarting
 	 * T392 */
 	link->err_count++;
+	check_link_state(link, false);
 	osmo_timer_schedule(&link->t392, osmo_tdef_get(link->net->T_defs, 392, OSMO_TDEF_S, 15), 0);
 }
 
@@ -502,7 +724,6 @@ struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role)
 struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
 {
 	struct osmo_fr_link *link = talloc_zero(net, struct osmo_fr_link);
-	int timer = 0;
 	if (!link)
 		return NULL;
 
@@ -515,12 +736,10 @@ struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
 
 	switch (net->role) {
 	case FR_ROLE_USER_EQUIPMENT:
-		timer = osmo_tdef_get(link->net->T_defs, 391, OSMO_TDEF_S, 10);
-		LOGP(DLNS, LOGL_ERROR, "Scheduling for %d seconds\n", timer);
-		osmo_timer_schedule(&link->t391, timer, 0);
-		osmo_timer_schedule(&link->t392, osmo_tdef_get(link->net->T_defs, 392, OSMO_TDEF_S, 15), 0);
+		osmo_timer_schedule(&link->t391, osmo_tdef_get(link->net->T_defs, 391, OSMO_TDEF_S, 15), 0);
 		break;
 	case FR_ROLE_NETWORK_EQUIPMENT:
+		osmo_timer_schedule(&link->t392, osmo_tdef_get(link->net->T_defs, 392, OSMO_TDEF_S, 15), 0);
 		break;
 	}
 
@@ -552,8 +771,19 @@ struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 
 	llist_add_tail(&dlc->list, &link->dlc_list);
 
-	dlc->new = true;
+	dlc->add = true;
 	tx_lmi_q933_status(link, Q933_IEI_PVC_STATUS);
 
 	return dlc;
+}
+
+struct osmo_fr_dlc *osmo_fr_dlc_by_dlci(struct osmo_fr_link *link, uint16_t dlci)
+{
+	struct osmo_fr_dlc *dlc;
+
+	llist_for_each_entry(dlc, &link->dlc_list, list) {
+		if (dlc->dlci == dlci)
+			return dlc;
+	}
+	return NULL;
 }
