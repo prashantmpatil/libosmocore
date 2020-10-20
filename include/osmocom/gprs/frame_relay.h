@@ -50,6 +50,7 @@ struct osmo_fr_link {
 	unsigned int succeed;
 	/* the type of the last status enquiry */
 	uint8_t expected_rep;
+	bool state;
 
 	/* list of data link connections at this link */
 	struct llist_head dlc_list;
