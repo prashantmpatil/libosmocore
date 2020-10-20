@@ -334,7 +334,7 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 		}
 	} else {
 		/* good link */
-		if (link->state) {
+		if (!link->state) {
 			LOGP(DFR, LOGL_INFO, "Link recovered");
 			link->state = true;
 		}
