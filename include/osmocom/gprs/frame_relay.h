@@ -44,8 +44,12 @@ struct osmo_fr_link {
 
 	struct osmo_timer_list t391;
 	struct osmo_timer_list t392;
+
 	unsigned int polling_count;
 	unsigned int err_count;
+	unsigned int succeed;
+	/* the type of the last status enquiry */
+	uint8_t expected_rep;
 
 	/* list of data link connections at this link */
 	struct llist_head dlc_list;
@@ -68,7 +72,7 @@ struct osmo_fr_dlc {
 	/* is this DLC marked active for traffic? */
 	bool active;
 	/* was this DLC newly added? */
-	bool new;
+	bool add;
 	/* is this DLC about to be destroyed */
 	bool del;
 
@@ -87,6 +91,8 @@ void osmo_fr_link_free(struct osmo_fr_link *link);
 
 /* allocate a data link connectoin on a given framerelay link */
 struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci);
+
+struct osmo_fr_dlc *osmo_fr_dlc_by_dlci(struct osmo_fr_link *link, uint16_t dlci);
 
 int osmo_fr_rx(struct msgb *msg);
 int osmo_fr_tx_dlc(struct msgb *msg);
