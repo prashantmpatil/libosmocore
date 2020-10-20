@@ -327,9 +327,17 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 			carry++;
 
 	if (link->net->n393 - carry >= link->net->n392) {
-		/* link is now failing */
+		/* failing link */
+		if (link->state) {
+			LOGP(DFR, LOGL_INFO, "Link failed");
+			link->state = false;
+		}
 	} else {
-		/* link is now good */
+		/* good link */
+		if (link->state) {
+			LOGP(DFR, LOGL_INFO, "Link recovered");
+			link->state = true;
+		}
 	}
 }
 
@@ -635,6 +643,11 @@ int osmo_fr_rx(struct msgb *msg)
 		return 0;
 	}
 
+	if (!link->state) {
+		LOGP(DFR, LOGL_NOTICE, "Link is not reliable. Discarding Rx PDU on DLCI %d\n", dlci);
+		goto out;
+	}
+
 	llist_for_each_entry(dlc, &link->dlc_list, list) {
 		if (dlc->dlci == dlci) {
 			/* dispatch to handler of respective DLC */
@@ -659,7 +672,7 @@ int osmo_fr_tx_dlc(struct msgb *msg)
 	struct osmo_fr_dlc *dlc = msg->dst;
 	struct osmo_fr_link *link = dlc->link;
 
-	if (!dlc->active) {
+	if (!link->state || !dlc->active) {
 		LOGP(DFR, LOGL_NOTICE, "DLCI %u is not active (yet), discarding\n", dlc->dlci);
 		msgb_free(msg);
 		return -1;
