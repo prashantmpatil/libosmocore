@@ -8,6 +8,7 @@
 
 #include <osmocom/core/prim.h>
 #include <osmocom/gprs/protocol/gsm_08_16.h>
+#include <osmocom/gprs/frame_relay.h>
 
 struct osmo_sockaddr;
 struct osmo_sockaddr_str;
@@ -155,6 +156,7 @@ const char *gprs_ns2_fr_bind_netif(struct gprs_ns2_vc_bind *bind);
 int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
 		     const char *netif,
 		     struct osmo_fr_network *fr_network,
+		     enum osmo_fr_role fr_role,
 		     struct gprs_ns2_vc_bind **result);
 int gprs_ns2_is_fr_bind(struct gprs_ns2_vc_bind *bind);
 struct gprs_ns2_vc *gprs_ns2_fr_nsvc_by_dlci(struct gprs_ns2_vc_bind *bind, uint16_t dlci);

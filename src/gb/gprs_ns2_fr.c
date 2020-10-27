@@ -213,7 +213,7 @@ static int handle_netif_read(struct osmo_fd *bfd)
 	rc = read(bfd->fd, msg->data, NS_ALLOC_SIZE);
 	if (rc < 0) {
 		LOGP(DLNS, LOGL_ERROR, "recv error %s during NS-FR-GRE recv\n",
-			strerror(errno));
+		     strerror(errno));
 		goto out_err;
 	} else if (rc == 0) {
 		goto out_err;
@@ -353,11 +353,14 @@ static int open_socket(const char *ifname)
 /*! Create a new bind for NS over FR.
  *  \param[in] nsi NS instance in which to create the bind
  *  \param[in] netif Network interface to bind to
+ *  \param[in] fr_network
+ *  \param[in] fr_role
  *  \param[out] result pointer to created bind
  *  \return 0 on success; negative on error */
 int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
 		     const char *netif,
 		     struct osmo_fr_network *fr_network,
+		     enum osmo_fr_role fr_role,
 		     struct gprs_ns2_vc_bind **result)
 {
 	struct gprs_ns2_vc_bind *bind = talloc_zero(nsi, struct gprs_ns2_vc_bind);
@@ -391,7 +394,7 @@ int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
 		*result = bind;
 
 	/* FIXME: move fd handling into socket.c */
-	fr_link = osmo_fr_link_alloc(fr_network);
+	fr_link = osmo_fr_link_alloc(fr_network, fr_role);
 	if (!fr_link) {
 		rc = -EINVAL;
 		goto err_priv;
