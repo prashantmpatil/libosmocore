@@ -15,7 +15,7 @@
 #include <osmocom/gsm/tlv.h>
 
 
-#define DFR DLGLOBAL
+#define DFR DLNS
 
 /* Table 4-2/Q.931 */
 enum q931_msgtype {
@@ -133,6 +133,8 @@ static const struct tlv_definition q933_att_tlvdef = {
 		[Q933_IEI_PVC_STATUS] = { TLV_TYPE_TLV },
 	},
 };
+
+static void check_link_state(struct osmo_fr_link *link, bool valid);
 
 static inline uint16_t q922_to_dlci(const uint8_t *hdr)
 {
@@ -252,6 +254,7 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 	resp = q933_msgb_alloc(0, Q931_PDISC_CC, Q931_MSGT_STATUS);
 	if (!resp)
 		return -1;
+
 	resp->dst = link;
 
 	/* Table A.1/Q.933 */
@@ -259,11 +262,21 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 	switch (rep_type) {
 	case Q933_REPT_FULL_STATUS:
 		msgb_put_link_int_verif(resp, link);
-		llist_for_each_entry(dlc, &link->dlc_list, list)
+		llist_for_each_entry(dlc, &link->dlc_list, list) {
+			if (dlc->add || dlc->del)
+				dlc->state_send = true;
+
 			msgb_put_pvc_status(resp, dlc);
+		}
 		break;
 	case Q933_REPT_LINK_INTEGRITY_VERIF:
 		msgb_put_link_int_verif(resp, link);
+		llist_for_each_entry(dlc, &link->dlc_list, list) {
+			if (dlc->add || dlc->del) {
+				msgb_put_pvc_status(resp, dlc);
+				dlc->state_send = true;
+			}
+		}
 		break;
 	case Q933_REPT_SINGLE_PVC_ASYNC_STS:
 		llist_for_each_entry(dlc, &link->dlc_list, list)
@@ -279,10 +292,11 @@ static int tx_lmi_q933_status(struct osmo_fr_link *link, uint8_t rep_type)
 static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 {
 	struct osmo_fr_link *link = msg->dst;
+	struct osmo_fr_dlc *dlc;
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
 
-	if (link->net->role == FR_ROLE_USER_EQUIPMENT) {
+	if (link->role == FR_ROLE_USER_EQUIPMENT) {
 		LOGP(DFR, LOGL_DEBUG, "Status enq aren't support for role user ");
 		return -1;
 	}
@@ -299,8 +313,30 @@ static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 
 	/* the network checks the receive sequence number received from
 	 * the user equipment against its send sequence counter */
-	if (link_int_rx[1] != link->last_tx_seq)
+	if (link_int_rx[1] != link->last_tx_seq) {
+		check_link_state(link, false);
 		link->err_count++;
+	} else {
+		check_link_state(link, true);
+		/* confirm DLC state changes */
+		llist_for_each_entry(dlc, &link->dlc_list, list) {
+			if (!dlc->state_send)
+				continue;
+
+			if (dlc->add) {
+				dlc->active = link->state;
+				dlc->add = false;
+			}
+
+			if (dlc->del) {
+				dlc->del = false;
+				/* TODO: implement FRNET free */
+			}
+
+			dlc->state_send = false;
+		}
+	}
+
 
 	/* The network responds to each STATUS ENQUIRY message with a
 	 * STATUS message and resets the T392 timer */
@@ -315,6 +351,7 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 {
 	unsigned int last, i;
 	unsigned int carry = 0;
+	struct osmo_fr_dlc *dlc;
 
 	link->succeed = link->succeed << 1;
 	if (valid)
@@ -328,15 +365,30 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 
 	if (link->net->n393 - carry >= link->net->n392) {
 		/* failing link */
-		if (link->state) {
-			LOGP(DFR, LOGL_INFO, "Link failed");
-			link->state = false;
+		if (!link->state)
+			return;
+
+		LOGP(DFR, LOGL_INFO, "Link failed");
+		link->state = false;
+		if (link->role == FR_ROLE_USER_EQUIPMENT)
+			return;
+
+		llist_for_each_entry(dlc, &link->dlc_list, list) {
+			dlc->active = false;
 		}
 	} else {
 		/* good link */
-		if (!link->state) {
-			LOGP(DFR, LOGL_INFO, "Link recovered");
-			link->state = true;
+		if (link->state)
+			return;
+
+		LOGP(DFR, LOGL_INFO, "Link recovered");
+		link->state = true;
+		if (link->role == FR_ROLE_USER_EQUIPMENT)
+			return;
+
+		llist_for_each_entry(dlc, &link->dlc_list, list) {
+			if (!dlc->add && !dlc->del)
+				dlc->active = true;
 		}
 	}
 }
@@ -497,7 +549,7 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
 
-	if (link->net->role == FR_ROLE_NETWORK_EQUIPMENT) {
+	if (link->role == FR_ROLE_NETWORK_EQUIPMENT) {
 		LOGP(DFR, LOGL_DEBUG, "Status aren't support for role network\n");
 		return -1;
 	}
@@ -718,7 +770,7 @@ static void fr_t392_cb(void *data)
 }
 
 /* allocate a frame relay network */
-struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role)
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx)
 {
 	struct osmo_fr_network *net = talloc_zero(ctx, struct osmo_fr_network);
 
@@ -729,18 +781,31 @@ struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role)
 	net->n392 = 3;
 	net->n393 = 4;
 
-	net->role = role;
-
 	return net;
 }
 
+void osmo_fr_network_free(struct osmo_fr_network *net)
+{
+	struct osmo_fr_link *link, *tmp;
+
+	if (!net)
+		return;
+
+	llist_for_each_entry_safe(link, tmp, &net->links, list) {
+		osmo_fr_link_free(link);
+	}
+}
+
 /* allocate a frame relay link in a given network */
-struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
+struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net, enum osmo_fr_role role)
 {
 	struct osmo_fr_link *link = talloc_zero(net, struct osmo_fr_link);
 	if (!link)
 		return NULL;
 
+	LOGP(DFR, LOGL_INFO, "Creating frame relay link with role %d\n", role);
+
+	link->role = role;
 	link->net = net;
 	INIT_LLIST_HEAD(&link->dlc_list);
 	llist_add_tail(&link->list, &net->links);
@@ -748,7 +813,7 @@ struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net)
 	osmo_timer_setup(&link->t391, fr_t391_cb, link);
 	osmo_timer_setup(&link->t392, fr_t392_cb, link);
 
-	switch (net->role) {
+	switch (role) {
 	case FR_ROLE_USER_EQUIPMENT:
 		osmo_timer_schedule(&link->t391, osmo_tdef_get(link->net->T_defs, 391, OSMO_TDEF_S, 15), 0);
 		break;
@@ -790,6 +855,8 @@ struct osmo_fr_dlc *osmo_fr_dlc_alloc(struct osmo_fr_link *link, uint16_t dlci)
 
 	return dlc;
 }
+
+/* TODO: osmo_fr_dlc_alloc with deregistering it from the link in fr-net */
 
 struct osmo_fr_dlc *osmo_fr_dlc_by_dlci(struct osmo_fr_link *link, uint16_t dlci)
 {

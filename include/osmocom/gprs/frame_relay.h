@@ -22,7 +22,6 @@ struct osmo_fr_network {
 	unsigned int n392;		/* error threshold */
 	unsigned int n393;		/* monitored events count */
 
-	enum osmo_fr_role role;
 	struct osmo_tdef *T_defs;	/* T391, T392 */
 };
 
@@ -33,6 +32,7 @@ struct osmo_fr_link {
 	/* list in osmo_fr_network.links */
 	struct llist_head list;
 	struct osmo_fr_network *net;
+	enum osmo_fr_role role;
 
 	/* value of the last received send sequence number field in the
 	 * link integrity verification information element */
@@ -77,15 +77,19 @@ struct osmo_fr_dlc {
 	/* is this DLC about to be destroyed */
 	bool del;
 
+	/* the local state needs to be transfered to the
+	 * UE. The NET must wait until the UE confirms it implicited by a seq number check */
+	bool state_send;
+
 	int (*rx_cb)(void *cb_data, struct msgb *msg);
 	void *rx_cb_data;
 };
 
 /* allocate a frame relay network */
-struct osmo_fr_network *osmo_fr_network_alloc(void *ctx, enum osmo_fr_role role);
+struct osmo_fr_network *osmo_fr_network_alloc(void *ctx);
 
 /* allocate a frame relay link in a given network */
-struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net);
+struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net, enum osmo_fr_role role);
 
 /* free a frame link in a given network */
 void osmo_fr_link_free(struct osmo_fr_link *link);

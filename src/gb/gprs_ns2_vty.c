@@ -79,6 +79,10 @@ struct ns2_vty_vc {
 	uint16_t nsvci;
 	uint16_t frdlci;
 
+	struct {
+		enum osmo_fr_role role;
+	} fr;
+
 	char netif[IF_NAMESIZE + 1];
 
 	bool remote_end_is_sgsn;
@@ -414,7 +418,7 @@ DEFUN(show_nse, show_nse_cmd, "show ns (nsei|nsvc) <0-65535> [stats]",
 #define NSE_CMD_STR "Persistent NS Entity\n" "NS Entity ID (NSEI)\n"
 
 DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
-	"nse <0-65535> nsvci <0-65535> fr NETIF dlci <0-1023>",
+	"nse <0-65535> nsvci <0-65535> (fr|frnet) NETIF dlci <0-1023>",
 	NSE_CMD_STR
 	"NS Virtual Connection\n"
 	"NS Virtual Connection ID (NSVCI)\n"
@@ -428,14 +432,20 @@ DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
 
 	uint16_t nsei = atoi(argv[0]);
 	uint16_t nsvci = atoi(argv[1]);
-	const char *name = argv[2];
-	uint16_t dlci = atoi(argv[3]);
+	const char *role = argv[2];
+	const char *name = argv[3];
+	uint16_t dlci = atoi(argv[4]);
 
 	vtyvc = vtyvc_by_nsei(nsei, true);
 	if (!vtyvc) {
 		vty_out(vty, "Can not allocate space %s", VTY_NEWLINE);
 		return CMD_WARNING;
 	}
+
+	if (!strcmp(role, "fr"))
+		vtyvc->fr.role = FR_ROLE_USER_EQUIPMENT;
+	else if (!strcmp(role, "frnet"))
+		vtyvc->fr.role = FR_ROLE_NETWORK_EQUIPMENT;
 
 	strncpy(vtyvc->netif, name, sizeof(vtyvc->netif));
 	vtyvc->frdlci = dlci;
@@ -893,15 +903,16 @@ int gprs_ns2_vty_create() {
 				continue;
 			}
 			break;
-		case GPRS_NS_LL_FR:
+		case GPRS_NS_LL_FR: {
 			if (vty_fr_network == NULL) {
-				vty_fr_network = osmo_fr_network_alloc(vty_nsi, FR_ROLE_USER_EQUIPMENT);
+				/* TODO: add a switch for BSS/SGSN/gbproxy */
+				vty_fr_network = osmo_fr_network_alloc(vty_nsi);
 			}
 			fr = gprs_ns2_fr_bind_by_netif(
 						vty_nsi,
 						vtyvc->netif);
 			if (!fr) {
-				rc = gprs_ns2_fr_bind(vty_nsi, vtyvc->netif, vty_fr_network, &fr);
+				rc = gprs_ns2_fr_bind(vty_nsi, vtyvc->netif, vty_fr_network, vtyvc->fr.role, &fr);
 				if (rc < 0) {
 					LOGP(DLNS, LOGL_ERROR, "Can not create fr bind on device %s err: %d\n", vtyvc->netif, rc);
 					return rc;
@@ -914,6 +925,7 @@ int gprs_ns2_vty_create() {
 				continue;
 			}
 			break;
+		}
 		case GPRS_NS_LL_FR_GRE:
 		case GPRS_NS_LL_E1:
 			continue;
