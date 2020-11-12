@@ -855,6 +855,7 @@ int gprs_ns2_vty_create() {
 				/* Could not create NSVC, connect failed */
 				continue;
 			}
+			nsvc->persistent = true;
 			break;
 		case GPRS_NS_LL_FR: {
 			if (vty_fr_network == NULL) {
@@ -877,13 +878,13 @@ int gprs_ns2_vty_create() {
 				/* Could not create NSVC, connect failed */
 				continue;
 			}
+			nsvc->persistent = true;
 			break;
 		}
 		case GPRS_NS_LL_FR_GRE:
 		case GPRS_NS_LL_E1:
 			continue;
 		}
-		nsvc->persistent = true;
 	}
 
 
