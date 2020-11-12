@@ -400,7 +400,7 @@ DEFUN(cfg_nse_fr, cfg_nse_fr_cmd,
 	else if (!strcmp(role, "frnet"))
 		vtyvc->fr.role = FR_ROLE_NETWORK_EQUIPMENT;
 
-	strncpy(vtyvc->netif, name, sizeof(vtyvc->netif));
+	osmo_strlcpy(vtyvc->netif, name, sizeof(vtyvc->netif));
 	vtyvc->frdlci = dlci;
 	vtyvc->nsvci = nsvci;
 	vtyvc->ll = GPRS_NS_LL_FR;
