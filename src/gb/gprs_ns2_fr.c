@@ -254,7 +254,6 @@ static int fr_dlci_rx_cb(void *cb_data, struct msgb *msg)
 	struct gprs_ns2_vc *nsvc = cb_data;
 
 	rc = ns2_recv_vc(nsvc, msg);
-	msgb_free(msg);
 
 	return rc;
 }
