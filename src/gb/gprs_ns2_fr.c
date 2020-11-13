@@ -53,7 +53,7 @@
 #include <osmocom/core/talloc.h>
 #include <osmocom/gprs/gprs_ns2.h>
 
-
+#include "common_vty.h"
 #include "gprs_ns2_internal.h"
 
 #define GRE_PTYPE_FR	0x6559
@@ -135,6 +135,25 @@ static void free_vc(struct gprs_ns2_vc *nsvc)
 
 	talloc_free(nsvc->priv);
 	nsvc->priv = NULL;
+}
+
+static void dump_vty(const struct gprs_ns2_vc_bind *bind, struct vty *vty, bool _stats)
+{
+	struct priv_bind *priv;
+	struct gprs_ns2_vc *nsvc;
+
+	if (!bind)
+		return;
+
+	priv = bind->priv;
+
+	vty_out(vty, "FR bind: %s%s", priv->netif, VTY_NEWLINE);
+
+	llist_for_each_entry(nsvc, &bind->nsvc, blist) {
+		vty_out(vty, "    %s%s", gprs_ns2_ll_str(nsvc), VTY_NEWLINE);
+	}
+
+	priv = bind->priv;
 }
 
 /*! clean up all private driver state. Should be only called by gprs_ns2_free_bind() */
@@ -374,6 +393,7 @@ int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
 	bind->driver = &vc_driver_fr;
 	bind->send_vc = fr_vc_sendmsg;
 	bind->free_vc = free_vc;
+	bind->dump_vty = dump_vty;
 	bind->nsi = nsi;
 	priv = bind->priv = talloc_zero(bind, struct priv_bind);
 	if (!priv) {
