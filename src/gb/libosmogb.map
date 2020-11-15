@@ -51,6 +51,7 @@ osmo_fr_link_free;
 osmo_fr_dlc_alloc;
 osmo_fr_rx;
 osmo_fr_tx_dlc;
+osmo_fr_role_names;
 
 gprs_ns_signal_ns_names;
 gprs_ns_pdu_strings;

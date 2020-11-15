@@ -106,6 +106,12 @@ struct q933_a_pvc_sts {
 /* RX Message: 14 [ 00 01 03 08 00 75  95 01 01 00 03 02 01 00 ] */
 /* RX Message: 13 [ 00 01 03 08 00 75  51 01 00  53 02 01 00 ] */
 
+const struct value_string osmo_fr_role_names[] = {
+	{ FR_ROLE_USER_EQUIPMENT,	"USER" },
+	{ FR_ROLE_NETWORK_EQUIPMENT,	"NETWORK" },
+	{ 0, NULL }
+};
+
 /* Table A.4/Q.933 */
 struct osmo_tdef fr_tdefs[] = {
 	{
@@ -826,7 +832,7 @@ struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net, enum osmo_f
 	if (!link)
 		return NULL;
 
-	LOGPFRL(link, LOGL_INFO, "Creating frame relay link with role %d\n", role);
+	LOGPFRL(link, LOGL_INFO, "Creating frame relay link with role %s\n", osmo_fr_role_str(role));
 
 	link->role = role;
 	link->net = net;

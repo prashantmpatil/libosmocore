@@ -4,6 +4,7 @@
 
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
 
 #include <stdint.h>
 
@@ -14,6 +15,12 @@ enum osmo_fr_role {
 	FR_ROLE_USER_EQUIPMENT,
 	FR_ROLE_NETWORK_EQUIPMENT,
 };
+
+extern const struct value_string osmo_fr_role_names[];
+
+static inline const char *osmo_fr_role_str(enum osmo_fr_role role) {
+	return get_value_string(osmo_fr_role_names, role);
+}
 
 struct osmo_fr_network {
 	struct llist_head links;
