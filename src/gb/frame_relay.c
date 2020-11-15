@@ -301,7 +301,7 @@ static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 	OSMO_ASSERT(link);
 
 	if (link->role == FR_ROLE_USER_EQUIPMENT) {
-		LOGPFRL(link, LOGL_DEBUG, "Status enq aren't support for role user ");
+		LOGPFRL(link, LOGL_ERROR, "STATUS-ENQ aren't support for role user\n");
 		return -1;
 	}
 
@@ -372,7 +372,7 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 		if (!link->state)
 			return;
 
-		LOGPFRL(link, LOGL_INFO, "Link failed");
+		LOGPFRL(link, LOGL_NOTICE, "Link failed\n");
 		link->state = false;
 		if (link->role == FR_ROLE_USER_EQUIPMENT)
 			return;
@@ -385,7 +385,7 @@ static void check_link_state(struct osmo_fr_link *link, bool valid)
 		if (link->state)
 			return;
 
-		LOGPFRL(link, LOGL_INFO, "Link recovered");
+		LOGPFRL(link, LOGL_NOTICE, "Link recovered\n");
 		link->state = true;
 		if (link->role == FR_ROLE_USER_EQUIPMENT)
 			return;
@@ -452,7 +452,7 @@ static int parse_full_pvc_status(struct osmo_fr_link *link, struct tlv_parsed *t
 		if (!dlc) {
 			dlc = osmo_fr_dlc_alloc(link, dlci);
 			if (!dlc) {
-				LOGPFRL(link, LOGL_ERROR, "Could not create DLC %d", dlci);
+				LOGPFRL(link, LOGL_ERROR, "Could not create DLC %d\n", dlci);
 			}
 		}
 
@@ -519,7 +519,7 @@ static int parse_link_pvc_status(struct osmo_fr_link *link, struct tlv_parsed *t
 
 			dlc = osmo_fr_dlc_alloc(link, dlci);
 			if (!dlc) {
-				LOGPFRL(link, LOGL_ERROR, "Could not create DLC %d", dlci);
+				LOGPFRL(link, LOGL_ERROR, "Rx STATUS: Could not create DLC %d\n", dlci);
 			}
 		}
 
@@ -556,13 +556,13 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	OSMO_ASSERT(link);
 
 	if (link->role == FR_ROLE_NETWORK_EQUIPMENT) {
-		LOGPFRL(link, LOGL_DEBUG, "Status aren't support for role network\n");
+		LOGPFRL(link, LOGL_ERROR, "Rx STATUS: STATUS aren't support for role network\n");
 		return -1;
 	}
 
 	/* check for mandatory IEs */
 	if (!TLVP_PRES_LEN(tp, Q933_IEI_REPORT_TYPE, 1)) {
-		LOGPFRL(link, LOGL_DEBUG, "Missing TLV Q933 Report Type\n");
+		LOGPFRL(link, LOGL_NOTICE, "Rx STATUSL: Missing TLV Q933 Report Type\n");
 		return -1;
 	}
 
@@ -572,13 +572,13 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	case Q933_REPT_FULL_STATUS:
 	case Q933_REPT_LINK_INTEGRITY_VERIF:
 		if (rep_type != link->expected_rep) {
-			LOGPFRL(link, LOGL_DEBUG, "Unexpected Q933 report type (got 0x%x != exp 0x%x)\n",
+			LOGPFRL(link, LOGL_NOTICE, "Rx STATUS: Unexpected Q933 report type (got 0x%x != exp 0x%x)\n",
 			     rep_type, link->expected_rep);
 			return -1;
 		}
 
 		if (!TLVP_PRES_LEN(tp, Q933_IEI_LINK_INT_VERIF, 2)) {
-			LOGPFRL(link, LOGL_DEBUG, "Missing TLV Q933 Link Integrety Verification\n");
+			LOGPFRL(link, LOGL_NOTICE, "Rx STATUS: Missing TLV Q933 Link Integrety Verification\n");
 			return -1;
 		}
 		link_int_rx = TLVP_VAL(tp, Q933_IEI_LINK_INT_VERIF);
@@ -598,8 +598,7 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 
 	check_link_state(link, true);
 	if (count_pvc_status(tp, MAX_SUPPORTED_PVC + 1) > MAX_SUPPORTED_PVC) {
-		LOGPFRL(link, LOGL_ERROR, "Too many PVC! Only %d are supported!\n",
-		     MAX_SUPPORTED_PVC);
+		LOGPFRL(link, LOGL_ERROR, "Rx STATUS: Too many PVC! Only %d are supported!\n", MAX_SUPPORTED_PVC);
 	}
 
 	switch (rep_type) {
@@ -679,19 +678,19 @@ int osmo_fr_rx(struct msgb *msg)
 	OSMO_ASSERT(link);
 
 	if (msgb_length(msg) < 2) {
-		LOGPFRL(link, LOGL_ERROR, "Short FR header: %u bytes\n", msgb_length(msg));
+		LOGPFRL(link, LOGL_ERROR, "Rx short FR header: %u bytes\n", msgb_length(msg));
 		rc = -1;
 		goto out;
 	}
 
 	frh = msg->l1h = msgb_data(msg);
 	if (frh[0] & 0x01) {
-		LOGPFRL(link, LOGL_NOTICE, "Unsupported single-byte FR address\n");
+		LOGPFRL(link, LOGL_NOTICE, "Rx Unsupported single-byte FR address\n");
 		rc = -1;
 		goto out;
 	}
 	if ((frh[1] & 0x0f) != 0x01) {
-		LOGPFRL(link, LOGL_NOTICE, "Unknown second FR octet 0x%02x\n", frh[1]);
+		LOGPFRL(link, LOGL_NOTICE, "Rx Unknown second FR octet 0x%02x\n", frh[1]);
 		rc = -1;
 		goto out;
 	}
@@ -702,7 +701,7 @@ int osmo_fr_rx(struct msgb *msg)
 	case LMI_Q933A_DLCI:
 		return rx_lmi_q922(msg);
 	case LMI_CISCO_DLCI:
-		LOGPFRL(link, LOGL_NOTICE, "Unsupported FR DLCI %u\n", dlci);
+		LOGPFRL(link, LOGL_ERROR, "Rx Unsupported FR DLCI %u\n", dlci);
 		goto out;
 	}
 
@@ -739,12 +738,17 @@ int osmo_fr_tx_dlc(struct msgb *msg)
 	OSMO_ASSERT(dlc);
 	OSMO_ASSERT(link);
 
-	if (!link->state || !dlc->active) {
-		LOGPFRL(link, LOGL_NOTICE, "DLCI %u is not active (yet), discarding\n", dlc->dlci);
+	if (!link->state) {
+		LOGPFRL(link, LOGL_NOTICE, "Link is not reliable (yet), discarding Tx\n");
 		msgb_free(msg);
 		return -1;
 	}
-	LOGPFRL(link, LOGL_NOTICE, "DLCI %u is active, sending message\n", dlc->dlci);
+	if (!dlc->active) {
+		LOGPFRL(link, LOGL_NOTICE, "DLCI %u is not active (yet), discarding Tx\n", dlc->dlci);
+		msgb_free(msg);
+		return -1;
+	}
+	LOGPFRL(link, LOGL_DEBUG, "DLCI %u is active, sending message\n", dlc->dlci);
 
 	if (msgb_headroom(msg) < 2) {
 		msgb_free(msg);
