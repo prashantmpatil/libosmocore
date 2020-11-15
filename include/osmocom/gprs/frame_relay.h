@@ -33,6 +33,8 @@ struct osmo_fr_link {
 	struct llist_head list;
 	struct osmo_fr_network *net;
 	enum osmo_fr_role role;
+	/* human-readable name */
+	const char *name;
 
 	/* value of the last received send sequence number field in the
 	 * link integrity verification information element */
@@ -89,7 +91,7 @@ struct osmo_fr_dlc {
 struct osmo_fr_network *osmo_fr_network_alloc(void *ctx);
 
 /* allocate a frame relay link in a given network */
-struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net, enum osmo_fr_role role);
+struct osmo_fr_link *osmo_fr_link_alloc(struct osmo_fr_network *net, enum osmo_fr_role role, const char *name);
 
 /* free a frame link in a given network */
 void osmo_fr_link_free(struct osmo_fr_link *link);

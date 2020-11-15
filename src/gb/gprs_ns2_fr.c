@@ -413,7 +413,7 @@ int gprs_ns2_fr_bind(struct gprs_ns2_inst *nsi,
 		*result = bind;
 
 	/* FIXME: move fd handling into socket.c */
-	fr_link = osmo_fr_link_alloc(fr_network, fr_role);
+	fr_link = osmo_fr_link_alloc(fr_network, fr_role, netif);
 	if (!fr_link) {
 		rc = -EINVAL;
 		goto err_priv;
