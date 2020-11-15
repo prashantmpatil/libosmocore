@@ -298,6 +298,8 @@ static int rx_lmi_q933_status_enq(struct msgb *msg, struct tlv_parsed *tp)
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
 
+	OSMO_ASSERT(link);
+
 	if (link->role == FR_ROLE_USER_EQUIPMENT) {
 		LOGPFRL(link, LOGL_DEBUG, "Status enq aren't support for role user ");
 		return -1;
@@ -551,6 +553,8 @@ static int rx_lmi_q933_status(struct msgb *msg, struct tlv_parsed *tp)
 	const uint8_t *link_int_rx;
 	uint8_t rep_type;
 
+	OSMO_ASSERT(link);
+
 	if (link->role == FR_ROLE_NETWORK_EQUIPMENT) {
 		LOGPFRL(link, LOGL_DEBUG, "Status aren't support for role network\n");
 		return -1;
@@ -625,6 +629,8 @@ static int rx_lmi_q922(struct msgb *msg)
 	uint8_t *lapf;
 	int rc;
 
+	OSMO_ASSERT(link);
+
 	if (msgb_l2len(msg) < 1)
 		return -1;
 	lapf = msgb_l2(msg);
@@ -669,6 +675,8 @@ int osmo_fr_rx(struct msgb *msg)
 	uint16_t dlci;
 	struct osmo_fr_dlc *dlc;
 	struct osmo_fr_link *link = msg->dst;
+
+	OSMO_ASSERT(link);
 
 	if (msgb_length(msg) < 2) {
 		LOGPFRL(link, LOGL_ERROR, "Short FR header: %u bytes\n", msgb_length(msg));
@@ -728,6 +736,9 @@ int osmo_fr_tx_dlc(struct msgb *msg)
 	struct osmo_fr_dlc *dlc = msg->dst;
 	struct osmo_fr_link *link = dlc->link;
 
+	OSMO_ASSERT(dlc);
+	OSMO_ASSERT(link);
+
 	if (!link->state || !dlc->active) {
 		LOGPFRL(link, LOGL_NOTICE, "DLCI %u is not active (yet), discarding\n", dlc->dlci);
 		msgb_free(msg);
@@ -753,6 +764,8 @@ static void fr_t391_cb(void *data)
 {
 	struct osmo_fr_link *link = data;
 
+	OSMO_ASSERT(link);
+
 	if (link->polling_count % link->net->n391 == 0)
 		tx_lmi_q933_status_enq(link, Q933_REPT_FULL_STATUS);
 	else
@@ -764,6 +777,9 @@ static void fr_t391_cb(void *data)
 static void fr_t392_cb(void *data)
 {
 	struct osmo_fr_link *link = data;
+
+	OSMO_ASSERT(link);
+
 	/* A.5 The network increments the error count .. Non-receipt of
 	 * a STATUS ENQUIRY within T392, which results in restarting
 	 * T392 */
